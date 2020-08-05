@@ -169,11 +169,17 @@ def shortest_pathes(topo, src, exclude_points=None):
             self.label = label
             self.path = path
     
-        def __cmp__(self, n):
+        def __lt__(self, n):
             if self.d == n.d:
-                return cmp(len(self.path), len(n.path))
+                return len(self.path) < len(n.path)
             else:
-                return cmp(self.d, n.d)
+                return self.d < n.d
+
+        def __eq__(self, n):
+            if self.d == n.d:
+                return len(self.path) == len(n.path)
+            else:
+                return self.d == n.d
 
     now = Node(0, src, [[src]])
     dis[src] = 0
