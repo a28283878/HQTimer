@@ -15,16 +15,18 @@ class Network:
         
         self.switch_num = len(topo)
         self.switches = []
+        # 依據topo增加switch，例如single就會增加switch 0,1,2
         for label in range(self.switch_num):
             self.switches.append(switch.Switch(label))
 
+        # 沒有soft_label會預設sw_type = TYPE_HARDWARE
         self.soft_labels = soft_labels
         if soft_labels is None:
             self.soft_labels = []            
         for label in self.soft_labels:
             self.switches[label].set_sw_type(setting.TYPE_SOFTWARE)
 
-        self.controller = controller.Controller(topo, soft_labels, ruleset_pkl)
+        self.controller = controller.Controller(topo, soft_labels, ruleset_pkl) #設定controller
         self.traffic = traffic.Traffic()
 
     def generate_random_traffic(self, traffic_mat, total, burst_max=1, exp=1, pktsize=1500):

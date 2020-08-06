@@ -9,8 +9,11 @@ import element, setting
 """ 
 class Ruleset:
     def __init__(self):
+        # rule對應到哪個規則 '12.103.125.156': (32, '12.103.125.156')
         self.rules = {}
+        # ruleset : 有哪些規則 (mask, dstip) -> (8, '78.0.0.0'), (9, '12.128.0.0')
         self.ruleset = set()
+        # dependent set
         self.depset = {}
 
     def get_depset(self, maxdep):
@@ -53,7 +56,10 @@ class Ruleset:
             lines = f.readlines()
             lines = [l.rstrip('\n').split('\t') for l in lines]
             for l in lines:
+                # l = ['@107.80.165.63/32', '79.96.231.174/32', '1024 : 65535', '53 : 53', '0x11/0xFF', '0x0000/0x0000', '']
+                # l[1].split('/') =  ['79.96.231.174', '32']
                 [dstip, priority_str] = l[1].split('/')
+                
                 priority = int(priority_str)
                 # remove rules with very low priority
                 if priority < minpri:
@@ -65,8 +71,11 @@ class Ruleset:
             lines = f.readlines()
             lines = [l.rstrip('\n').split('\t') for l in lines]
             for l in lines:
+                # l = ['1879048191', '208108956', '161', '0', '17', '0', '15']
                 dstip_int = int(l[1])
+                # dstip : l[1] 轉成 ipv4 208108956 -> 12.103.125.156
                 dstip = element.int2ip(dstip_int)
+                # all_dstprefix : 從0~32的mask跑一次 12.103.125.156 -> {0: '0.0.0.0" .... 31: '12.103.125.156', 32: '12.103.125.156'}
                 all_dstprefix = {mask: element.int2ip(element.get_ip_range(dstip, mask)[0])
                                  for mask in range(33)}
                 for mask in range(32, minpri-1, -1):

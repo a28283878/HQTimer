@@ -9,11 +9,17 @@ import data
     
 
 def simulate(para):
+    # n : topology 可以設定網路拓樸樣式，ruleset、topo、generate log traffic都在這裡面設定
     n = para['net']
+    # mode : idle, hard, hybrid
     mode = para['mode']
+    # log_prefix : log紀錄的前贅字 idle_dqn_0.95之類的
     log_prefix = para['log_prefix']
+    # 
     check_interval = para['check_interval']
+    # timeout預設機制的數字代號
     predictor_name = para['predictor_name']
+    #
     update_interval = para['update_interval']
     validate_point = None
     if 'validate_point' in para:
@@ -21,6 +27,7 @@ def simulate(para):
 
     c = n.controller
     c.add_predictor(predictor_name)
+    # set() : 無序不重複元素集合 
     unit_updates = set()
     n_units_updates = set()
     visited_check_points = set()

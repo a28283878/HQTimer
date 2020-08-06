@@ -13,9 +13,12 @@ class Controller:
         self.switch_num = len(topo)
         self.soft_labels = soft_labels
 
+        # shortest_pathes : 例如3個switch，就會產生{0: {}, 1: {}, 2: {}}
         self.shortest_pathes = {label: {} for label in range(self.switch_num)}
+        # 取得每個switch間的shortest_pathes()
         self.get_shortest_pathes()
 
+        #匯入ruleset
         if ruleset_pkl is not None:
             self.ruleset = element.de_serialize(ruleset_pkl)
 

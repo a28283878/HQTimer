@@ -156,9 +156,9 @@ BRIDGE_TRAFFIC_DATA = 'bridge.json'
 0-1-2
 """
 SINGLE = [
-    [1],
-    [0, 2],
-    [1]
+    [1], #與1連接
+    [0, 2], #與0,2連接
+    [1] #與1連接
 ]
 SINGLE_TRAFFIC_MAT = [[0 for _ in range(3)] for _ in range(3)]
 SINGLE_TRAFFIC_MAT[0][2] = 1.0
