@@ -83,6 +83,7 @@ def pdf2cdf_1d(pdf_mat):
     for i in range(len(cdf_mat)):
         cp += cdf_mat[i]
         cdf_mat[i] = cp
+    # list[-1] 代表最後的元素，'-'代表從最後開始數，-1最後 -2倒數第二...
     assert abs(cdf_mat[-1]-1.0) < setting.DEFAULT_PRECISION
     return cdf_mat
     
@@ -215,13 +216,13 @@ def get_shortest_pathes(topo, exclude_points=None):
         all_spathes[src] = spathes
     return all_spathes
 
-
+# 齊夫定律
 def zipf(burst_max, exp=1):
     pdf_mat = [1.0/(n**exp) for n in range(1, burst_max+1)]
     s = sum(pdf_mat)
     pdf_mat = [1.0*p/s for p in pdf_mat]
     cdf_mat = pdf2cdf_1d(pdf_mat) 
-    # print(pdf_mat); print(cdf_mat)
+    print(pdf_mat); print(cdf_mat)
     return sample_1d(cdf_mat)+1
 
 

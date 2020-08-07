@@ -8,6 +8,7 @@ import element
 def synflow2pkt(src, dst, burst_max=1, exp=1, pktsize=1500, dup=1):
     from random import randint
     pkt_set = []
+    # random產生src、dst ip，第三位的src dst會是switch number
     srcip = '{}.{}.{}.{}'.format(randint(0, 255),
                                  randint(0, 255),
                                  src,
@@ -18,6 +19,7 @@ def synflow2pkt(src, dst, burst_max=1, exp=1, pktsize=1500, dup=1):
                                  randint(0, 255))
     srcport = randint(1, 65535)
     dstport = randint(1, 65535)
+    # 6 = tcp
     protocol = 6
     for _ in range(element.zipf(burst_max, exp, )):
         for _ in range(dup):
