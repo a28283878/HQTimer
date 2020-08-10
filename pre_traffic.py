@@ -157,3 +157,5 @@ def test_pre_traffic():
 
 if __name__ == '__main__':
     test_pre_traffic()
+    pre_single('sample.pkl')
+    pre_rule()
