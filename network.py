@@ -77,7 +77,7 @@ class Network:
                     (new_src_sub, new_dst_sub) = subnet2subnet[(old_src_sub, old_dst_sub)]
                 else:
                     new_src_sub = choice(sw_list)
-                    new_dst_sub = choice(filter(lambda x:x!=new_src_sub, sw_list))
+                    new_dst_sub = choice(list(filter(lambda x:x!=new_src_sub, sw_list)))
                     subnet2subnet[(old_src_sub, old_dst_sub)] = (new_src_sub, new_dst_sub)
                 new_tp[0] = '{}.{}.{}.{}'.format(old_src_split[0],
                                                  old_src_split[1],
