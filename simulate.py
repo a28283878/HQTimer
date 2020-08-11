@@ -41,7 +41,7 @@ def simulate(para):
     
     for pkt in n.traffic.pkts:
         # print('\nprocessing packet#{} {} at {}'.format(pktnum, pkt, curtime))
-        sw = n.switches[pkt.src]
+        sw = n.switches[pkt.src] #src : 是ip的第三個位置 *.*.src.*，在這裡代表是switch的編號
         # print('*arriving source s{}'.format(sw.label))
         hop = 0
         of = 0
@@ -104,7 +104,7 @@ def simulate(para):
         fnum = flownum[pktnum]
         pktnum += 1
         overflow_num += of
-        pkttime = c.get_delay(pkt.path, pkt.size)
+        pkttime = c.get_delay(pkt.path, pkt.size) # pkt 傳輸時間
         curtime += pkttime
 
         flowsize = n.traffic.flowsize[pkt.tp]

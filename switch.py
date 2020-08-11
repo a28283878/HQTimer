@@ -9,6 +9,7 @@ import setting
 
 class Switch:
     def __init__(self, label, sw_type=setting.TYPE_HARDWARE):
+        # switch的編號
         self.label = label
         self.sw_type = sw_type
 
@@ -52,8 +53,10 @@ class Switch:
         # del self.flow_table[entry.field][entry.match_field]
         return 0
 
+    #更新switch狀態
     def update(self, now=None):
         expire = []
+        #移除timeout flow
         if now is not None:
             to_remove = []
             for field in self.flow_table:
@@ -61,6 +64,7 @@ class Switch:
                     entry = self.flow_table[field][match_field]
                     if entry.ts+entry.timeout <= now:
                         to_remove.append(entry)
+                        #確認是否有FLAG_REMOVE_NOTIFY，timeout後要通知controller
                         if (entry.flag is not None and 
                             entry.flag == setting.FLAG_REMOVE_NOTIFY):
                             expire.append(entry)
@@ -74,6 +78,7 @@ class Switch:
             entry_list = self.get_entry_list()
             if now is not None:
                 # FIFO
+                # 由小到大刪除較久以前的flow
                 overflow = sorted(entry_list, key=lambda e: e.ts)[:(self.table_size-max_size)]
             else:
                 # LRU: remove least used rules. TODO

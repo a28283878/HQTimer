@@ -46,6 +46,7 @@ class Controller:
         else:
             self.install_num[rule] = 1
 
+    # 計算封包傳輸的時間
     def get_delay(self, path, size=1500):  # maximum Ethernet frame (1500B)
         delay = setting.LINK_RATE*size*(len(path)-1)
         for hop in path:
@@ -286,6 +287,6 @@ if __name__ == '__main__':
         for dst in c.shortest_pathes[src]:
             print('%s->%s:' % (src, dst), end='')
             print(c.shortest_pathes[src][dst], end=';')
-            
-    assert int(c.get_delay([0, setting.CTRL, 1])) == 4034
+    # tcp 1500(bit)*2(path len)*0.008(link rate) + 5(hardware switch delay)*2 + 4000(controller delay) = 4034 us        
+    assert int(c.get_delay([0, setting.CTRL, 1])) == 4034 
     assert int(c.get_delay([0, 2, 1])) == 69

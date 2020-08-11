@@ -25,7 +25,7 @@ def synflow2pkt(src, dst, burst_max=1, exp=1, pktsize=1500, dup=1):
             pkt_set.append(p)
     return pkt_set
 
-
+#pcap檔案轉pkt
 def pcap2pkts(pcap_file):
     pkts = []
     import dpkt
