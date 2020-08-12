@@ -131,6 +131,7 @@ class Network:
             elif act == setting.INST_DELETE:
                 sw = self.switches[obj]
                 sw.delete_entry(cont)
+                # TODO 應該要加delay
 
             # query statistic
             elif act == setting.INST_QUERY:
