@@ -11,6 +11,7 @@ import setting
 
 class Network:
     def __init__(self, topo, soft_labels=None, ruleset_pkl=None):
+        #ruleset_pkl:儲存ruleset的資訊
         self.topo = topo
         
         self.switch_num = len(topo)
