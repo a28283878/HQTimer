@@ -123,24 +123,29 @@ class Network:
         ret = {}
         for inst in instractions:
             (act, obj, cont) = inst
+            # add entry
             if act == setting.INST_ADD:
                 sw = self.switches[obj]
                 sw.add_entry(cont)
-
+            # delete entry
             elif act == setting.INST_DELETE:
                 sw = self.switches[obj]
                 sw.delete_entry(cont)
 
+            # query statistic
             elif act == setting.INST_QUERY:
+                # query all sw enrty number
                 if obj == setting.INST_OBJ_ALL:
                     num = 0  
                     for sw in self.switches:
                         num += sw.table_size
                     ret[setting.INST_OBJ_ALL] = num
+                # query no.cont sw entry number
                 elif obj == setting.INST_OBJ_TABLE:
                     sw = self.switches[cont]
                     num = sw.table_size
                     ret[setting.INST_OBJ_TABLE] = num
+                # query no.cont sw entry
                 elif obj == setting.INST_OBJ_ENTRY:
                     sw = self.switches[cont]
                     ret[setting.INST_OBJ_ENTRY] = sw.get_entry_list()

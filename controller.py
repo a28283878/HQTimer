@@ -269,10 +269,10 @@ class Controller:
             if entry.timeout_type == setting.TIMEOUT_IDLE and entry.priority < 32:
                 # print('*remove dependency')
                 rule = (entry.priority, entry.match_field)
-                deprules = self.ruleset.depset[rule]
+                deprules = self.ruleset.depset[rule] # dependent ruleset
                 for r in deprules:
                     if r[0] == 32:
-                        entry = element.Entry(setting.FIELD_DSTIP, 32, r[1], None)
+                        entry = element.Entry(setting.FIELD_DSTIP, 32, r[1], None) # exact match rule
                     else:
                         entry = element.Entry(setting.FIELD_DSTPREFIX, r[0], r[1], None)
                     instractions.append((setting.INST_DELETE, label, entry))

@@ -10,7 +10,7 @@ class Entry:
                  ts=None, timeout=None, timeout_type=None):
         self.field = field
         self.priority = priority
-        self.match_field = match_field
+        self.match_field = match_field # = tp = (srcip, dstip, srcport, dstport, protocol, ...)
         self.action = action
         self.flag = flag
 

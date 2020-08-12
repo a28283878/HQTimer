@@ -56,15 +56,15 @@ class Switch:
     #更新switch狀態
     def update(self, now=None):
         expire = []
-        #移除timeout flow
         if now is not None:
+            # 將超時的flow移到to_remove這個list，並且從switch刪除flow entry
             to_remove = []
             for field in self.flow_table:
                 for match_field in self.flow_table[field]:
                     entry = self.flow_table[field][match_field]
                     if entry.ts+entry.timeout <= now:
                         to_remove.append(entry)
-                        #確認是否有FLAG_REMOVE_NOTIFY，timeout後要通知controller
+                        #確認是否有FLAG_REMOVE_NOTIFY，timeout後要通知controller，若要就放進expire
                         if (entry.flag is not None and 
                             entry.flag == setting.FLAG_REMOVE_NOTIFY):
                             expire.append(entry)
@@ -73,6 +73,7 @@ class Switch:
                 self.delete_entry(entry)
 
         max_size = setting.FLOW_TABLE_SIZE[self.sw_type]
+        # 將overflow被刪除的flow移到overflow list，並且從switch刪除flow entry
         overflow = []
         if self.table_size >= max_size:
             entry_list = self.get_entry_list()
