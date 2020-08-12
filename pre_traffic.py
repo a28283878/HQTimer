@@ -44,10 +44,10 @@ def pre_single(pkl_file):
 
 
 def pre_slice_pcap():
-    for i in range(25):
+    for i in range(17):
         start = 1+i*1000000
         end = (i+1)*1000000
-        print('editcap -r tf real{}-{}.pcap {}-{} -F pcap &'
+        print('editcap -r 200611021400.pcap real{}-{}.pcap {}-{} -F pcap &'
               .format(i, i+1, start, end))
     return
 
@@ -55,7 +55,7 @@ def pre_slice_pcap():
 def pre_real_pcap():
     # [0, ~15000000] pkts
     fdir = './pcap_file/'
-    pcap_filelist = ['{}real{}-{}.pcap'.format(fdir, i, i+1) for i in range(0, 25)]
+    pcap_filelist = ['{}real{}-{}.pcap'.format(fdir, i, i+1) for i in range(0, 17)]
     pkl_file = 'real10k.pkl'
     json_file = 'real10k.json'
     max_flownum = 101000
@@ -153,9 +153,11 @@ def test_pre_traffic():
     pre_pcap(pcap_filelist, pkl_file, json_file='sample.json')
 
     return
-    
+
+def ten_k_real_traffic():
+    pre_real_pcap()
+    pre_single('real10k.pkl')
+    pre_rule()
 
 if __name__ == '__main__':
-    test_pre_traffic()
-    pre_single('sample.pkl')
-    pre_rule()
+    pre_real_pcap()
