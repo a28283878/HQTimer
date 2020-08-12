@@ -352,7 +352,7 @@ if __name__ == '__main__':
         sw = int(argv[1])
         mode = int(argv[2])
         predictor_name = int(argv[3])
-        setting.DEFAULT_TIMEOUT = int(argv[4])*1e6
+        setting.DEFAULT_TIMEOUT = int(argv[4])*1e6 # default 5 s
         if sw == 0:  # run single
             single(timeout_type[mode], predictor_type[predictor_name])
         elif sw == 1:  # run cb

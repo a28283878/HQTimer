@@ -160,4 +160,4 @@ def ten_k_real_traffic():
     pre_rule()
 
 if __name__ == '__main__':
-    pre_real_pcap()
+    ten_k_real_traffic()
