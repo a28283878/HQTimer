@@ -51,6 +51,7 @@ def simulate(para):
                 pkt.path.append(sw.label)
                 break
 
+            # expire:超時被移除且必須要通知controller的flow   overflow:因為overflow而被移除的flow
             [expire, overflow] = sw.update(curtime)
             of += len(overflow)
             # print('*update\n**s{}'.format(sw.label))
@@ -61,7 +62,9 @@ def simulate(para):
             #     print('**overflow:')
             #     for entry in overflow: print(entry)
 
+            # controller是否需要對移除的flow做instraction
             instractions = c.flow_removed(sw.label, expire, overflow, curtime, mode)
+            # 針對controller的instraction操作
             n.process_ctrl_messages(instractions)
 
             [pkt, next_hop] = sw.recv_pkt(pkt, curtime)
