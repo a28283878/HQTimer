@@ -14,3 +14,8 @@ Reference:
 [2] MAWI Working Group Traffic Archive. http://mawi.wide.ad.jp/mawi/.
 
 [3] ClassBench: A Packet Classification Benchmark. https://www.arl.wustl.edu/classbench/
+
+pcap:
+1. pre_traffic.pre_pcap 使用pcap產生pkl(trace log)
+2. pre_traffic.pre_single 使用pkl(trace log)產生使用在single topo的pkl(trace log)
+3. pre_traffic.pre_rule 使用pkl(single topo trace log)產生pkl(single topo ruleset)，並且會產生不同比例的wildcard ruleset數量
