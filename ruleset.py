@@ -38,6 +38,7 @@ class Ruleset:
         for pkt in traffic.pkts:
             if pkt.dstip in self.rules: continue
             dice = random()
+            # rate : 會產生出此比例的wildcard rule
             if dice <= rate:
                 dstprefix = element.int2ip(element.get_ip_range(pkt.dstip, mask)[0])
                 self.rules[pkt.dstip] = (24, dstprefix)

@@ -7,7 +7,7 @@ import setting
 import network
 import ruleset
 
-
+# 把pcap轉成pkl以及json，pkl做為模擬的封包處理，或是在進行topo的處理(pre_single)
 def pre_pcap(pcap_filelist, pkl_file, max_flownum=None, json_file=None):
     print('serialize {} into {}'.format(pcap_filelist, pkl_file))
     t = traffic.Traffic()
@@ -27,7 +27,7 @@ def pre_pcap(pcap_filelist, pkl_file, max_flownum=None, json_file=None):
     return
 
 
-
+# 把pkl轉為single的topo，src、dst轉為switch label 0 1 2
 def pre_single(pkl_file):
     print('single: transform {} into {}'.format(pkl_file, setting.SINGLE_TRAFFIC_LOGFILE))
 
@@ -116,7 +116,7 @@ def pre_classbench_trace():
             p.dst = 2
             pkts.append(p)
         tf.add_pkts(pkts)
-    element.serialize(tf, setting.CB_TRACE_PKL)
+    element.serialize(tf, setting.CB_TRACE_LOGFILE)
     
     return
 

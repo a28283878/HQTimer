@@ -73,11 +73,11 @@ class Packet:
         self.path = []
 
         if tp is not None:
-            self.srcip = tp[0]
-            self.dstip = tp[1]
+            self.srcip = tp[0] # src ip
+            self.dstip = tp[1] # dst ip
 
-            self.src = int(self.srcip.split('.')[2])
-            self.dst = int(self.dstip.split('.')[2])
+            self.src = int(self.srcip.split('.')[2]) # src switch編號
+            self.dst = int(self.dstip.split('.')[2]) # dst switch編號
 
             if len(tp) == 5:
                 self.srcport = tp[2]

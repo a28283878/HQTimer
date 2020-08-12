@@ -42,6 +42,7 @@ class Network:
     def generate_sample_traffic(self, dup=1):
         self.traffic = traffic.Traffic()
         pkts = []
+        # flow_set 所有switch的組合
         flow_set = [[i, j] for i in range(self.switch_num) 
             for j in range(self.switch_num)]
         for flow in flow_set:
@@ -49,6 +50,7 @@ class Network:
         self.traffic.add_pkts(pkts)
         return 0
 
+    # 對應到topo的switch label
     def traffic_mapping(self, old_pkts, sw_list=None):
         from random import randint, choice
         
