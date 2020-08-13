@@ -97,10 +97,11 @@ class Packet:
 
 class Traffic:
     def __init__(self, pcap_file=None):
-        self.pkts = []
+        self.pkts = [] # 封包傳輸的順序
 
-        self.flowsize = {}
-        self.flownum = []
+        # 如同json file
+        self.flowsize = {} # ('244.3.0.39', '41.177.2.94', 3260, 49240, 6) : 2346 會顯示flow傳輸的byte大小，並沒有照封包傳輸順序排列
+        self.flownum = [] # [1,1,1,2,2,3,4,5....]，並沒有照封包傳輸順序排列
 
         if pcap_file is not None:
             pkts = pcap2pkts(pcap_file)

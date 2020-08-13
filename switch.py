@@ -59,6 +59,7 @@ class Switch:
         if now is not None:
             # 將超時的flow移到to_remove這個list，並且從switch刪除flow entry
             to_remove = []
+            # 比對flow table
             for field in self.flow_table:
                 for match_field in self.flow_table[field]:
                     entry = self.flow_table[field][match_field]
@@ -165,6 +166,7 @@ class Switch:
 
             return match_entry.action
 
+    # simulate switch recive packet
     def recv_pkt(self, pkt, now=None):
         action = self.get_match_action(pkt, now)  # action = [(type, value), ...]
 

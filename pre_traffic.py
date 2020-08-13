@@ -154,10 +154,17 @@ def test_pre_traffic():
 
     return
 
-def ten_k_real_traffic():
+def hundred_k_real_traffic():
     pre_real_pcap()
     pre_single('real10k.pkl')
     pre_rule()
 
+def sample_pre_traffic():
+    pcap_filelist = ['sample.pcap']
+    pkl_file = 'sample.pkl'
+    pre_pcap(pcap_filelist, pkl_file, json_file='sample.json')
+    pre_single('sample.pkl')
+    pre_rule()
+
 if __name__ == '__main__':
-    ten_k_real_traffic()
+    sample_pre_traffic()

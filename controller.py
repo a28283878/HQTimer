@@ -171,7 +171,7 @@ class Controller:
 
         for r in deprules:
             if r[0] == 32:
-                field = setting.FIELD_DSTIP
+                field = setting.FIELD_DSTIP # fwd to exact ip
                 priority = 32
             else:
                 field = setting.FIELD_DSTPREFIX[r[0]]

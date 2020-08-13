@@ -9,7 +9,7 @@ import element, setting
 """ 
 class Ruleset:
     def __init__(self):
-        # rule對應到哪個規則 '12.103.125.156': (32, '12.103.125.156')
+        # rule對應到哪個規則 dstip '12.103.125.156': (32, '12.103.125.156')
         self.rules = {}
         # ruleset : 有哪些規則 (mask, dstip) -> (8, '78.0.0.0'), (9, '12.128.0.0')
         self.ruleset = set()
