@@ -292,7 +292,7 @@ def single(mode, predictor_name):
         'net': n,
         'mode': mode,
         'log_prefix': log_prefix,
-        'check_interval': 10, #多少flow會記錄一次checkpoint
+        'check_interval': 1000, #多少flow會記錄一次checkpoint
         'predictor_name': predictor_name,
         'update_interval': setting.DEFAULT_UPDATE
     }
@@ -335,6 +335,38 @@ def cb(mode, predictor_name):
     
     return
 
+def brain(mode, predictor_name):
+    timeout_type = {
+        setting.MODE_HARD: 'hard', 
+        setting.MODE_IDLE: 'idle',
+        setting.MODE_HYBRID: 'hybrid',
+    }
+    predictor_type = {
+        setting.PREDICTOR_DEFAULT: 'no',
+        setting.PREDICTOR_SIMPLE: 'itm',
+        setting.PREDICTOR_Q: 'q',
+        setting.PREDICTOR_DQN: 'dqn'
+    }
+    
+    topo = setting.BRAIN
+    n = network.Network(topo, soft_labels=None, ruleset_pkl=setting.BRAIN_RULE_PKL)
+    n.generate_log_traffic(setting.BRAIN_TRAFFIC_LOGFILE)
+    
+    log_prefix = './data/brain_{}_{}_{}'.format(timeout_type[mode], 
+                                             predictor_type[predictor_name],
+                                             int(setting.DEFAULT_TIMEOUT/1e6))
+    para = {
+        'net': n,
+        'mode': mode,
+        'log_prefix': log_prefix,
+        'check_interval': 1000,
+        'predictor_name': predictor_name,
+        'update_interval': setting.DEFAULT_UPDATE
+    }
+
+    simulate(para)
+    
+    return
 
 if __name__ == '__main__':
     from sys import argv

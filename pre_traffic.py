@@ -175,5 +175,9 @@ def test_cb_pre_traffic():
     pre_single(setting.CB_TRACE_LOGFILE)
     pre_rule()
 
+def brain_pre_traffic():
+    pkl_file = './dataset/100K/real10k.pkl'
+    pre_brain(pkl_file)
+
 if __name__ == '__main__':
-    test_cb_pre_traffic()
+    brain_pre_traffic()
