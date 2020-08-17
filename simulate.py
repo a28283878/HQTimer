@@ -292,7 +292,7 @@ def single(mode, predictor_name):
         'net': n,
         'mode': mode,
         'log_prefix': log_prefix,
-        'check_interval': 1000, #多少flow會記錄一次checkpoint
+        'check_interval': 10, #多少flow會記錄一次checkpoint
         'predictor_name': predictor_name,
         'update_interval': setting.DEFAULT_UPDATE
     }

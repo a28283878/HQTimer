@@ -70,6 +70,7 @@ def pre_rule():
     traffic_pkl = setting.SINGLE_TRAFFIC_LOGFILE
     rate_arr = [0.1*i for i in range(1, 10)]
     for rate in rate_arr:
+        rate = round(rate, 1)
         ruleset_pkl = 'single_rule_{}.pkl'.format(rate)
         print(ruleset_pkl)
         rs = ruleset.Ruleset()
@@ -166,5 +167,13 @@ def sample_pre_traffic():
     pre_single('sample.pkl')
     pre_rule()
 
+def test_cb_pre_traffic():
+    setting.CB_RULE = "test_rule"
+    setting.CB_TRACE = "test_rule_trace"
+    pre_classbench_rule()
+    pre_classbench_trace()
+    pre_single(setting.CB_TRACE_LOGFILE)
+    pre_rule()
+
 if __name__ == '__main__':
-    sample_pre_traffic()
+    test_cb_pre_traffic()
