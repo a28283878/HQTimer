@@ -152,6 +152,7 @@ BRIDGE_TRAFFIC_MAT[3][9] = BRIDGE_TRAFFIC_MAT[9][3] = 0.125
 
 BRIDGE_TRAFFIC_LOGFILE = 'bridge.pkl'
 BRIDGE_TRAFFIC_DATA = 'bridge.json'
+BRIDGE_RULE_PKL = 'bridge_rule.pkl'
 
 """single
 0-1-2

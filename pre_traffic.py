@@ -146,6 +146,30 @@ def pre_brain(pkl_file):
 
     return
 
+def pre_bridge(pkl_file):
+    print('generating brain rule and trace...')
+
+    print('brain: transform {} into {}'.format(pkl_file, setting.BRIDGE_TRAFFIC_LOGFILE))
+
+    topo = setting.BRIDGE
+
+    n = network.Network(topo)
+    n.generate_real_traffic(pkl_file, setting.BRIDGE_SOFT_LABELS_EDGE)
+    n.traffic.serialize(setting.BRIDGE_TRAFFIC_LOGFILE)
+    n.traffic.print_traffic_data(setting.BRIDGE_TRAFFIC_DATA)
+
+    print('flow number: {}'.format(n.traffic.flownum[-1]))
+
+    print('brain: generating rule set...')
+
+    traffic_pkl = setting.BRIDGE_TRAFFIC_LOGFILE
+    ruleset_pkl = setting.BRIDGE_RULE_PKL
+    rs = ruleset.Ruleset()
+    rs.generate_ruleset_from_traffic(traffic_pkl, 24, 0.3)
+    element.serialize(rs, ruleset_pkl)
+
+    return
+
 
 def test_pre_traffic():
     pcap_filelist = ['sample.pcap']
@@ -179,5 +203,9 @@ def brain_pre_traffic():
     pkl_file = './dataset/100K/real10k.pkl'
     pre_brain(pkl_file)
 
+def bridge_pre_traffic():
+    pkl_file = './dataset/100K/real10k.pkl'
+    pre_bridge(pkl_file)
+
 if __name__ == '__main__':
-    brain_pre_traffic()
+    bridge_pre_traffic()

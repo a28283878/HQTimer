@@ -335,6 +335,39 @@ def cb(mode, predictor_name):
     
     return
 
+def bridge(mode, predictor_name):
+    timeout_type = {
+        setting.MODE_HARD: 'hard', 
+        setting.MODE_IDLE: 'idle',
+        setting.MODE_HYBRID: 'hybrid',
+    }
+    predictor_type = {
+        setting.PREDICTOR_DEFAULT: 'no',
+        setting.PREDICTOR_SIMPLE: 'itm',
+        setting.PREDICTOR_Q: 'q',
+        setting.PREDICTOR_DQN: 'dqn'
+    }
+    
+    topo = setting.BRIDGE
+    n = network.Network(topo, soft_labels=None, ruleset_pkl=setting.BRIDGE_RULE_PKL)
+    n.generate_log_traffic(setting.BRIDGE_TRAFFIC_LOGFILE)
+    
+    log_prefix = './data/bridge_{}_{}_{}'.format(timeout_type[mode], 
+                                             predictor_type[predictor_name],
+                                             int(setting.DEFAULT_TIMEOUT/1e6))
+    para = {
+        'net': n,
+        'mode': mode,
+        'log_prefix': log_prefix,
+        'check_interval': 1000,
+        'predictor_name': predictor_name,
+        'update_interval': setting.DEFAULT_UPDATE
+    }
+
+    simulate(para)
+    
+    return
+
 def brain(mode, predictor_name):
     timeout_type = {
         setting.MODE_HARD: 'hard', 
@@ -394,6 +427,8 @@ if __name__ == '__main__':
             cb(timeout_type[mode], predictor_type[predictor_name])
         elif sw == 2:  # run brain
             brain(timeout_type[mode], predictor_type[predictor_name])
+        elif sw == 3:  # run bridge
+            bridge(timeout_type[mode], predictor_type[predictor_name])
         else:
             raise NameError('Error. Invalid mode. Exit.')
     else:
