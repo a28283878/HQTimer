@@ -22,6 +22,9 @@ def simulate(para):
     #
     update_interval = para['update_interval']
     validate_point = None
+    max_flownum = None
+    if para['max_flownum'] is not None :
+        max_flownum = para['max_flownum']
     if 'validate_point' in para:
         validate_point = para['validate_point']
 
@@ -35,11 +38,16 @@ def simulate(para):
     flownum = n.traffic.flownum
     d = data.Data()
     curtime = 0
-    overflow_num = 0
+    overflow_num = {}
+    for i in range(n.switch_num):
+        overflow_num[i] = 0
+    overflow_num['total'] = 0
     pktnum = 0
     pktin = 0
-    
     for pkt in n.traffic.pkts:
+        if max_flownum is not None :
+            if flownum[pktnum] > max_flownum :
+                break
         # print('\nprocessing packet#{} {} at {}'.format(pktnum, pkt, curtime))
         sw = n.switches[pkt.src] #src : 是ip的第三個位置 *.*.src.*，在這裡代表是switch的編號
         # print('*arriving source s{}'.format(sw.label))
@@ -54,6 +62,8 @@ def simulate(para):
             # expire:超時被移除且必須要通知controller的flow   overflow:因為overflow而被移除的flow
             [expire, overflow] = sw.update(curtime)
             of += len(overflow)
+            if len(overflow) > 0:
+                overflow_num[sw.label] += len(overflow)
             # print('*update\n**s{}'.format(sw.label))
             # if len(expire) != 0:
             #     print('**expire:')
@@ -73,6 +83,7 @@ def simulate(para):
                 pktin += 1
                 instractions = c.packet_in(sw.label, pkt, curtime, mode)
                 n.process_ctrl_messages(instractions)
+                # d.predict['timeout'].append({"match_field":instractions[0][2].match_field, "timeout" :instractions[0][2].timeout})
             else:
                 sw = n.switches[next_hop]
             hop += 1
@@ -106,12 +117,12 @@ def simulate(para):
 
         fnum = flownum[pktnum]
         pktnum += 1
-        overflow_num += of
+        overflow_num['total'] += of
         pkttime = c.get_delay(pkt.path, pkt.size) # pkt 傳輸時間
         curtime += pkttime
 
         flowsize = n.traffic.flowsize[pkt.tp]
-        d.record_fct(pkt.tp, pkttime, flowsize)
+        #d.record_fct(pkt.tp, pkttime, flowsize)
                 
         if fnum%check_interval == 0:
             # if fnum not in d.delay['flownum']:
@@ -124,9 +135,9 @@ def simulate(para):
                 for entry in c.install_num:
                     totinstall += c.install_num[entry]
                 if validate_point is None:
-                    d.record(fnum, curtime, totentry, overflow_num, pktin, totinstall, pktnum)
+                    d.record(fnum, curtime, totentry, overflow_num.copy(), pktin, totinstall, pktnum)
                 elif pktnum >= validate_point:
-                    d.record(fnum, curtime, totentry, overflow_num, pktin, totinstall, pktnum)
+                    d.record(fnum, curtime, totentry, overflow_num.copy(), pktin, totinstall, pktnum)
                 
                 d.print_checkpoint(fnum, log_prefix+'_checkpoint.txt')
 
@@ -268,7 +279,7 @@ def test():
     return
 
 
-def single(mode, predictor_name):
+def single(mode, predictor_name, max_flownum=None):
     timeout_type = {
         setting.MODE_HARD: 'hard', 
         setting.MODE_IDLE: 'idle',
@@ -294,7 +305,8 @@ def single(mode, predictor_name):
         'log_prefix': log_prefix,
         'check_interval': 1000, #多少flow會記錄一次checkpoint
         'predictor_name': predictor_name,
-        'update_interval': setting.DEFAULT_UPDATE
+        'update_interval': setting.DEFAULT_UPDATE,
+        'max_flownum' : max_flownum
     }
 
     simulate(para)
@@ -416,13 +428,16 @@ if __name__ == '__main__':
         3: setting.PREDICTOR_DQN
     }
 
-    if len(argv) == 5:
+    if len(argv) >= 5:
         sw = int(argv[1])
         mode = int(argv[2])
         predictor_name = int(argv[3])
         setting.DEFAULT_TIMEOUT = int(argv[4])*1e6 # default 5 s
+        max_flownum = None
+        if len(argv) == 6:
+            max_flownum = int(argv[5])
         if sw == 0:  # run single
-            single(timeout_type[mode], predictor_type[predictor_name])
+            single(timeout_type[mode], predictor_type[predictor_name], max_flownum)
         elif sw == 1:  # run cb
             cb(timeout_type[mode], predictor_type[predictor_name])
         elif sw == 2:  # run brain

@@ -14,6 +14,7 @@ class Data:
         self.pktin = {'flownum': [], 'pktin': []}
         self.totinstall = {'flownum': [], 'totinstall': []}
         self.pktnum = {'flownum': [], 'pktnum': []}
+        # self.predict = {'timeout': []}
 
         self.fct = {}
         self.threshold = 102400  # 100KB
@@ -85,11 +86,14 @@ class Data:
             print(json.dumps(self.totinstall), file=f)
         with open(fileprefix+'_pktnum.json', 'w') as f:
             print(json.dumps(self.pktnum), file=f)
-        tail_fct_cdf = self.get_fct_cdf(self.tail_fct)
-        with open(fileprefix+'_tail_fct_cdf.json', 'w') as f:
-            print(json.dumps(tail_fct_cdf), file=f)
-        install_num_cdf = self.get_install_num_cdf()
-        with open(fileprefix+'_install_cdf.json', 'w') as f:
-            print(json.dumps(install_num_cdf), file=f)
-        
+        with open(fileprefix+'_delay.json', 'w') as f:
+            print(json.dumps(self.delay), file=f)
+        # tail_fct_cdf = self.get_fct_cdf(self.tail_fct)
+        # with open(fileprefix+'_tail_fct_cdf.json', 'w') as f:
+        #     print(json.dumps(tail_fct_cdf), file=f)
+        # install_num_cdf = self.get_install_num_cdf()
+        # with open(fileprefix+'_install_cdf.json', 'w') as f:
+        #     print(json.dumps(install_num_cdf), file=f)
+        # with open(fileprefix+'_predict.json', 'w') as f:
+        #     print(json.dumps(self.predict), file=f)
         return

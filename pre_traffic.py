@@ -47,7 +47,7 @@ def pre_slice_pcap():
     for i in range(17):
         start = 1+i*1000000
         end = (i+1)*1000000
-        print('editcap -r 200611021400.pcap real{}-{}.pcap {}-{} -F pcap &'
+        print('editcap -r 200912181400.pcap real{}-{}.pcap {}-{} -F pcap &'
               .format(i, i+1, start, end))
     return
 
@@ -180,7 +180,7 @@ def test_pre_traffic():
     return
 
 def hundred_k_real_traffic():
-    pre_real_pcap()
+    # pre_real_pcap()
     pre_single('real10k.pkl')
     pre_rule()
 
