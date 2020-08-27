@@ -195,9 +195,13 @@ class Controller:
         if self.predictor.name == setting.PREDICTOR_SIMPLE:
             self.predictor.update((setting.INFO_PACKET_IN, label, curtime, rule))
             timeout = self.predictor.predict(rule, curtime, label)
+            with open('data/itm_timeout', 'a') as f:
+                print('{} {}'.format(rule,timeout), file=f)
         if (self.predictor.name == setting.PREDICTOR_Q or 
             self.predictor.name == setting.PREDICTOR_DQN):
             timeout = self.predictor.predict(rule, curtime, label)
+            with open('data/{}_timeout'.format(self.predictor.name), 'a') as f:
+                print('{} {}'.format(rule,timeout), file=f)           
 
         instractions = []
         dst = pkt.dst

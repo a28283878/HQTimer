@@ -291,7 +291,7 @@ def single(mode, predictor_name, max_flownum=None):
         setting.PREDICTOR_Q: 'q',
         setting.PREDICTOR_DQN: 'dqn'
     }
-    
+
     topo = setting.SINGLE
     n = network.Network(topo, soft_labels=None, ruleset_pkl=setting.SINGLE_RULE_PKL)
     n.generate_log_traffic(setting.SINGLE_TRAFFIC_LOGFILE)
@@ -306,6 +306,7 @@ def single(mode, predictor_name, max_flownum=None):
         'check_interval': 1000, #多少flow會記錄一次checkpoint
         'predictor_name': predictor_name,
         'update_interval': setting.DEFAULT_UPDATE,
+        # 'update_interval': 1e4,
         'max_flownum' : max_flownum
     }
 

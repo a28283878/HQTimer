@@ -73,7 +73,8 @@ class Switch:
             for entry in to_remove:
                 self.delete_entry(entry)
 
-        max_size = setting.FLOW_TABLE_SIZE[self.sw_type]
+        # max_size = setting.FLOW_TABLE_SIZE[self.sw_type]
+        max_size = 3000
         # 將overflow被刪除的flow移到overflow list，並且從switch刪除flow entry
         overflow = []
         if self.table_size >= max_size:
