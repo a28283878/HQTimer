@@ -39,10 +39,37 @@ class Ruleset:
             if pkt.dstip in self.rules: continue
             dice = random()
             # rate : 會產生出此比例的wildcard rule
-            if dice <= rate:
+            if dice <= rate/2:
                 dstprefix = element.int2ip(element.get_ip_range(pkt.dstip, mask)[0])
                 self.rules[pkt.dstip] = (24, dstprefix)
                 self.ruleset.add((24, dstprefix))
+            elif dice <= rate:
+                dstprefix = element.int2ip(element.get_ip_range(pkt.dstip, 28)[0])
+                self.rules[pkt.dstip] = (28, dstprefix)
+                self.ruleset.add((28, dstprefix))
+            else:
+                self.rules[pkt.dstip] = (32, pkt.dstip)
+                self.ruleset.add((32, pkt.dstip))
+        
+        self.get_depset(maxdep)
+
+        return
+    
+    def generate_ruleset_from_traffic_diff_mask(self, traffic_pkl, mask=24, rate=0, mask_rate=1, maxdep=setting.INF):
+        traffic = element.de_serialize(traffic_pkl)
+        from random import random
+        for pkt in traffic.pkts:
+            if pkt.dstip in self.rules: continue
+            dice = random()
+            # rate : 會產生出此比例的wildcard rule
+            if dice <= rate*mask_rate:
+                dstprefix = element.int2ip(element.get_ip_range(pkt.dstip, mask)[0])
+                self.rules[pkt.dstip] = (24, dstprefix)
+                self.ruleset.add((24, dstprefix))
+            elif dice <= rate:
+                dstprefix = element.int2ip(element.get_ip_range(pkt.dstip, 28)[0])
+                self.rules[pkt.dstip] = (28, dstprefix)
+                self.ruleset.add((28, dstprefix))
             else:
                 self.rules[pkt.dstip] = (32, pkt.dstip)
                 self.ruleset.add((32, pkt.dstip))
