@@ -9,7 +9,7 @@ import element, setting
 """ 
 class Ruleset:
     def __init__(self):
-        # rule對應到哪個規則 dstip '12.103.125.156': (32, '12.103.125.156')
+        # rule對應到哪個規則 dstip '12.103.125.156': (32, '12.103.125.156') 顯示 mask
         self.rules = {}
         # ruleset : 有哪些規則 (mask, dstip) -> (8, '78.0.0.0'), (9, '12.128.0.0')
         self.ruleset = set()
@@ -20,9 +20,9 @@ class Ruleset:
         for ri in self.ruleset:
             self.depset[ri] = []
             if ri[0] == 32: continue
-            ri_range = element.get_ip_range(ri[1], ri[0])
+            ri_range = element.get_ip_range(ri[1], ri[0]) #ip range:int表示 [3232235520, 3232235775]
             for rj in self.ruleset:
-                if rj[0] < ri[0] or rj == ri: continue
+                if rj[0] < ri[0] or rj == ri: continue #確認priority
                 rj_range = element.get_ip_range(rj[1], rj[0])
                 if ri_range[1] < rj_range[0] or rj_range[1] < ri_range[0]:
                     continue

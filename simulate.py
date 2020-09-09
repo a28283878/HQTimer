@@ -77,7 +77,11 @@ def simulate(para):
             # 針對controller的instraction操作
             n.process_ctrl_messages(instractions)
 
-            [pkt, next_hop] = sw.recv_pkt(pkt, curtime)
+            rule = c.ruleset.rules[pkt.dstip]
+            exact_match = False
+            if rule is not None and rule[0] == 32:
+                exact_match = True
+            [pkt, next_hop] = sw.recv_pkt(pkt, exact_match, curtime)
             # print('*forwarding to {}'.format(next_hop))
             if next_hop == setting.CTRL:
                 pktin += 1
@@ -131,7 +135,8 @@ def simulate(para):
                 instractions = [(setting.INST_QUERY, setting.INST_OBJ_ALL, None)]
                 ret = n.process_ctrl_messages(instractions)
                 totentry = ret[setting.INST_OBJ_ALL]
-                totinstall = 0
+                totinstall = 0             
+                d.record_dep_install_num(c.dep_install_count)
                 for entry in c.install_num:
                     totinstall += c.install_num[entry]
                 if validate_point is None:
@@ -140,7 +145,6 @@ def simulate(para):
                     d.record(fnum, curtime, totentry, overflow_num.copy(), pktin, totinstall, pktnum)
                 
                 d.print_checkpoint(fnum, log_prefix+'_checkpoint.txt')
-
                 if 'save_model' in para:
                     c.predictor.save_weights(log_prefix)
 

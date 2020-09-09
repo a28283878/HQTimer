@@ -12,6 +12,7 @@ class Controller:
         self.topo = topo
         self.switch_num = len(topo)
         self.soft_labels = soft_labels
+        self.dep_install_count = 0
 
         # shortest_pathes : 例如3個switch，就會產生{0: {}, 1: {}, 2: {}}
         self.shortest_pathes = {label: {} for label in range(self.switch_num)}
@@ -188,7 +189,7 @@ class Controller:
         return instractions
 
     def packet_in_hybrid(self, label, pkt, curtime):
-        rule = self.ruleset.rules[pkt.dstip]
+        rule = self.ruleset.rules[pkt.dstip] # rule[0]:priority , rule[1]:dstip
         deprules = self.ruleset.depset[rule]
 
         timeout = setting.DEFAULT_TIMEOUT
@@ -221,7 +222,9 @@ class Controller:
             instractions.append((setting.INST_ADD, path[cnt], entry))
             self.record_install(rule)
 
+        num = 0
         for r in deprules:
+            num += 1
             if r[0] == 32:
                 field = setting.FIELD_DSTIP
                 priority = 32
@@ -237,7 +240,9 @@ class Controller:
                                       timeout_type=setting.TIMEOUT_HARD)
                 instractions.append((setting.INST_ADD, path[cnt], entry))
                 self.record_install(r)
-            
+                self.dep_install_count += 1
+            # if num > 20:
+            #     break
         return instractions
 
     def flow_removed(self, label, expire, overflow, curtime, mode=setting.MODE_DEFAULT):

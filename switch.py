@@ -15,6 +15,7 @@ class Switch:
 
         self.flow_table = {}
         self.table_size = 0
+        self.false_match_num = 0
 
         self.default_action = [(setting.ACT_FWD, setting.CTRL)]
 
@@ -116,7 +117,7 @@ class Switch:
         # print('**add entry at s{}:\n{}'.format(self.label, entry))
         return 0
 
-    def get_match_entry(self, pkt):
+    def get_match_entry(self, pkt, exact_match):
         match_entry = element.Entry(None, -1, None, None)
 
         def comp_entry(new_entry, old_entry):
@@ -140,6 +141,7 @@ class Switch:
                     entry = self.flow_table[field][attr]
                     match_entry = comp_entry(entry, match_entry)
 
+        wildcard_match = False
         # slow match (wildcard matching for dstip)
         if match_entry.priority == -1:
             for prefix in setting.FIELD_DSTPREFIX:
@@ -149,11 +151,16 @@ class Switch:
                     if attr in self.flow_table[field]:
                         entry = self.flow_table[field][attr]
                         match_entry = comp_entry(entry, match_entry)
+                        wildcard_match = True
         
+        # if exact_match == True and wildcard_match == True :
+        #     self.false_match_num += 1
+
+        # print(self.false_match_num)
         return match_entry
 
-    def get_match_action(self, pkt, now=None):
-        match_entry = self.get_match_entry(pkt)
+    def get_match_action(self, pkt, exact_match, now=None):
+        match_entry = self.get_match_entry(pkt, exact_match)
         # print('**match entry: {}'.format(match_entry))
         if match_entry.action is None:
             return self.default_action
@@ -168,8 +175,8 @@ class Switch:
             return match_entry.action
 
     # simulate switch recive packet
-    def recv_pkt(self, pkt, now=None):
-        action = self.get_match_action(pkt, now)  # action = [(type, value), ...]
+    def recv_pkt(self, pkt, exact_match, now=None):
+        action = self.get_match_action(pkt, exact_match, now)  # action = [(type, value), ...]
 
         for act in action:
             act_type = act[0]

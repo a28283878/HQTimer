@@ -14,6 +14,7 @@ class Data:
         self.pktin = {'flownum': [], 'pktin': []}
         self.totinstall = {'flownum': [], 'totinstall': []}
         self.pktnum = {'flownum': [], 'pktnum': []}
+        self.depinstall = {'flownum': [], 'depinstall': []}
         # self.predict = {'timeout': []}
 
         self.fct = {}
@@ -21,6 +22,7 @@ class Data:
         self.burst_fct = {}
         self.tail_fct = {}
         self.install_num = {}
+        self.dep_install_num = 0
 
     def record(self, flownum, delay, totentry, overflow, pktin, totinstall, pktnum):
         self.delay['flownum'].append(flownum)
@@ -35,6 +37,9 @@ class Data:
         self.totinstall['totinstall'].append(totinstall)
         self.pktnum['flownum'].append(flownum)
         self.pktnum['pktnum'].append(pktnum)
+        self.depinstall['flownum'].append(flownum)
+        self.depinstall['depinstall'].append(self.dep_install_num)
+
         return
 
     def record_fct(self, tp, pkttime, flowsize):
@@ -57,6 +62,9 @@ class Data:
 
     def record_install_num(self, install_num):
         self.install_num = install_num
+
+    def record_dep_install_num(self, dep_install_num) :
+        self.dep_install_num = dep_install_num
 
     def get_install_num_cdf(self):
         install_num_list = self.install_num.values()
@@ -88,6 +96,8 @@ class Data:
             print(json.dumps(self.pktnum), file=f)
         with open(fileprefix+'_delay.json', 'w') as f:
             print(json.dumps(self.delay), file=f)
+        with open(fileprefix+'_dep_install.json', 'w') as f:
+            print(json.dumps(self.depinstall), file=f)
         # tail_fct_cdf = self.get_fct_cdf(self.tail_fct)
         # with open(fileprefix+'_tail_fct_cdf.json', 'w') as f:
         #     print(json.dumps(tail_fct_cdf), file=f)

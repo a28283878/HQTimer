@@ -82,7 +82,7 @@ flow table size and forwarding delays cite from:
 'OFLOPS: An Open Framework for OpenFlow Switch Evaluation.'
 'DevoFlow: Scaling flow management for high-performance networks'
 """
-FLOW_TABLE_SIZE = {TYPE_HARDWARE: 3000, TYPE_SOFTWARE: 1e9}
+FLOW_TABLE_SIZE = {TYPE_HARDWARE: 4000, TYPE_SOFTWARE: 1e9}
 UNLIMITED_FLOW_TABLE = {TYPE_HARDWARE: INF, TYPE_SOFTWARE: INF}
 LINK_RATE = 0.008  # us/B. 1Gbps link 
 HARDWARE_FWD_DELAY = 5  # 4~5 us. ProCurve 5406zl 
@@ -167,7 +167,7 @@ SINGLE_TRAFFIC_MAT[0][2] = 1.0
 SINGLE_SW_LIST = [0, 2]
 SINGLE_TRAFFIC_LOGFILE = 'single.pkl'
 SINGLE_TRAFFIC_DATA = 'single.json'
-SINGLE_RULE_PKL = 'single_rule_0.2.pkl'
+SINGLE_RULE_PKL = 'single_rule_0.6.pkl'
 
 
 """germany50
