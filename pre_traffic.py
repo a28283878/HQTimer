@@ -68,7 +68,7 @@ def pre_rule():
     print('single: generating rule set...')
 
     traffic_pkl = setting.SINGLE_TRAFFIC_LOGFILE
-    rate_arr = [0.1*i for i in range(1, 10)]
+    rate_arr = [0.1*i for i in range(2, 8)]
     for rate in rate_arr:
         rate = round(rate, 1)
         ruleset_pkl = 'single_rule_{}.pkl'.format(rate)
@@ -208,4 +208,4 @@ def bridge_pre_traffic():
     pre_bridge(pkl_file)
 
 if __name__ == '__main__':
-    bridge_pre_traffic()
+    pre_rule()

@@ -278,7 +278,7 @@ class Controller:
                     if r[0] == 32:
                         entry = element.Entry(setting.FIELD_DSTIP, 32, r[1], None) # exact match rule
                     else:
-                        entry = element.Entry(setting.FIELD_DSTPREFIX, r[0], r[1], None)
+                        entry = element.Entry(setting.FIELD_DSTPREFIX[r[0]], r[0], r[1], None)
                     instractions.append((setting.INST_DELETE, label, entry))
         return instractions
 

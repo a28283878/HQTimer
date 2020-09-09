@@ -2,3 +2,4 @@
 *.pkl
 *.json
 *.pyc
+*.pcap
