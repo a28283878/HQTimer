@@ -15,6 +15,8 @@ class Ruleset:
         self.ruleset = set()
         # dependent set
         self.depset = {}
+        # dirdepset : 只擷取 depset 的直接dependent關係
+        self.dirdepset = {}
 
     def get_depset(self, maxdep):
         for ri in self.ruleset:
@@ -32,6 +34,39 @@ class Ruleset:
                         break
         return
 
+    def get_direct_depset(self):
+        from copy import deepcopy
+        self.dirdepset = deepcopy(self.depset)
+        for rs in self.depset:
+            if rs[0] == 24:
+                for dep_rs in self.depset[rs]:
+                    if dep_rs[0] == 28:
+                        self.dirdepset[rs] = list( set(self.depset[rs]) - set(self.depset[dep_rs]))
+                        
+    # def get_direct_depset(self, maxdep):
+    #     ruleset = sorted(self.ruleset, reverse=True)
+    #     count = 0
+    #     for r_child in ruleset:
+    #         count += 1
+    #         if r_child[0] == 24: continue
+    #         r_child_range = element.get_ip_range(r_child[1], r_child[0])
+    #         for r_parent in ruleset:
+    #             if r_parent in self.depset:
+    #                 if len(self.depset[r_parent]) > maxdep:
+    #                     break
+    #             else:
+    #                 self.depset[r_parent] = []
+    #             if r_child[0] < r_parent[0] or r_parent == r_child: continue
+    #             r_parent_range = element.get_ip_range(r_parent[1], r_parent[0])
+    #             if r_child_range[1] < r_parent_range[0] or r_parent_range[1] < r_child_range[0]:
+    #                 continue
+    #             else:
+    #                 self.depset[r_parent].append(r_child)
+    #                 break
+    #         if count % 1000 == 0:
+    #             print(count)
+    #     return
+
     def generate_ruleset_from_traffic(self, traffic_pkl, mask=24, rate=0, maxdep=setting.INF):
         traffic = element.de_serialize(traffic_pkl)
         from random import random
@@ -39,14 +74,10 @@ class Ruleset:
             if pkt.dstip in self.rules: continue
             dice = random()
             # rate : 會產生出此比例的wildcard rule
-            if dice <= rate/2:
+            if dice <= rate:
                 dstprefix = element.int2ip(element.get_ip_range(pkt.dstip, mask)[0])
                 self.rules[pkt.dstip] = (24, dstprefix)
                 self.ruleset.add((24, dstprefix))
-            elif dice <= rate:
-                dstprefix = element.int2ip(element.get_ip_range(pkt.dstip, 28)[0])
-                self.rules[pkt.dstip] = (28, dstprefix)
-                self.ruleset.add((28, dstprefix))
             else:
                 self.rules[pkt.dstip] = (32, pkt.dstip)
                 self.ruleset.add((32, pkt.dstip))
@@ -73,8 +104,9 @@ class Ruleset:
             else:
                 self.rules[pkt.dstip] = (32, pkt.dstip)
                 self.ruleset.add((32, pkt.dstip))
-        
+                
         self.get_depset(maxdep)
+        self.get_direct_depset(maxdep)
 
         return
 

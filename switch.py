@@ -156,7 +156,7 @@ class Switch:
         match_entry = self.get_match_entry(pkt)
         # print('**match entry: {}'.format(match_entry))
         if match_entry.action is None:
-            return self.default_action
+            return None
         else:
             match_entry.counter += 1
             if (now is not None and
@@ -170,7 +170,10 @@ class Switch:
     # simulate switch recive packet
     def recv_pkt(self, pkt, now=None):
         action = self.get_match_action(pkt, now)  # action = [(type, value), ...]
-
+        reason = setting.OFPR_ACTION
+        if action is None:
+            action = self.default_action
+            reason = setting.OFPR_NO_MATCH
         for act in action:
             act_type = act[0]
             if act_type == setting.ACT_TAG:
@@ -185,7 +188,7 @@ class Switch:
         if next_hop == setting.CTRL:
             pkt.path.append(setting.CTRL)
         
-        return [pkt, next_hop]
+        return [pkt, next_hop, reason]
 
 
 if __name__ == '__main__':

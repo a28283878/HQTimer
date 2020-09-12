@@ -44,6 +44,7 @@ def simulate(para):
     overflow_num['total'] = 0
     pktnum = 0
     pktin = 0
+    pktsize = 0
     for pkt in n.traffic.pkts:
         if max_flownum is not None :
             if flownum[pktnum] > max_flownum :
@@ -77,16 +78,17 @@ def simulate(para):
             # 針對controller的instraction操作
             n.process_ctrl_messages(instractions)
 
-            [pkt, next_hop] = sw.recv_pkt(pkt, curtime)
+            [pkt, next_hop, reason] = sw.recv_pkt(pkt, curtime)
             # print('*forwarding to {}'.format(next_hop))
             if next_hop == setting.CTRL:
                 pktin += 1
-                instractions = c.packet_in(sw.label, pkt, curtime, mode)
+                instractions = c.packet_in(sw.label, pkt, reason, curtime, mode)
                 n.process_ctrl_messages(instractions)
                 # d.predict['timeout'].append({"match_field":instractions[0][2].match_field, "timeout" :instractions[0][2].timeout})
             else:
                 sw = n.switches[next_hop]
             hop += 1
+            pktsize += pkt.size
             assert hop < 10*len(n.topo)
         # print('*pkt path = {}'.format(pkt.path))
 
@@ -135,9 +137,9 @@ def simulate(para):
                 for entry in c.install_num:
                     totinstall += c.install_num[entry]
                 if validate_point is None:
-                    d.record(fnum, curtime, totentry, overflow_num.copy(), pktin, totinstall, pktnum)
+                    d.record(fnum, curtime, totentry, overflow_num.copy(), pktin, totinstall, pktnum, pktsize)
                 elif pktnum >= validate_point:
-                    d.record(fnum, curtime, totentry, overflow_num.copy(), pktin, totinstall, pktnum)
+                    d.record(fnum, curtime, totentry, overflow_num.copy(), pktin, totinstall, pktnum, pktsize)
                 
                 d.print_checkpoint(fnum, log_prefix+'_checkpoint.txt')
 
@@ -284,6 +286,7 @@ def single(mode, predictor_name, max_flownum=None):
         setting.MODE_HARD: 'hard', 
         setting.MODE_IDLE: 'idle',
         setting.MODE_HYBRID: 'hybrid',
+        setting.MODE_MINE: 'mine'
     }
     predictor_type = {
         setting.PREDICTOR_DEFAULT: 'no',
@@ -421,6 +424,7 @@ if __name__ == '__main__':
         0: setting.MODE_HARD, 
         1: setting.MODE_IDLE,
         2: setting.MODE_HYBRID,
+        3: setting.MODE_MINE
     }
     predictor_type = {
         0: setting.PREDICTOR_DEFAULT,

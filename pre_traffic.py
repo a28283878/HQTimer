@@ -68,15 +68,27 @@ def pre_rule():
     print('single: generating rule set...')
 
     traffic_pkl = setting.SINGLE_TRAFFIC_LOGFILE
-    # rate_arr = [0.1*i for i in range(2, 8)]
-    rate_arr = [0.2, 0.4, 0.6]
+    rate_arr = [0.1*i for i in range(1, 10)]
     for rate in rate_arr:
         rate = round(rate, 1)
         ruleset_pkl = 'single_rule_{}.pkl'.format(rate)
         print(ruleset_pkl)
         rs = ruleset.Ruleset()
-        # rs.generate_ruleset_from_traffic(traffic_pkl, 24, rate)
-        rs.generate_ruleset_from_traffic_diff_mask(traffic_pkl, 24, rate, 0.2)
+        rs.generate_ruleset_from_traffic(traffic_pkl, 24, rate)
+        element.serialize(rs, ruleset_pkl)
+    return
+
+def pre_rule_mask(mask_rate):
+    print('single: generating rule set...')
+
+    traffic_pkl = setting.SINGLE_TRAFFIC_LOGFILE
+    rate_arr = [0.2, 0.4, 0.6]
+    for rate in rate_arr:
+        rate = round(rate, 1)
+        ruleset_pkl = 'single_rule_{}_mask_24-{}_28-{}.pkl'.format(rate, round(mask_rate,1), round(1-mask_rate,1))
+        print(ruleset_pkl)
+        rs = ruleset.Ruleset()
+        rs.generate_ruleset_from_traffic_diff_mask(traffic_pkl, 24, rate, mask_rate)
         element.serialize(rs, ruleset_pkl)
     return
 
@@ -210,4 +222,4 @@ def bridge_pre_traffic():
     pre_bridge(pkl_file)
 
 if __name__ == '__main__':
-    pre_rule()
+    pre_rule_mask(0.8)

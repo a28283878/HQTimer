@@ -14,6 +14,7 @@ class Data:
         self.pktin = {'flownum': [], 'pktin': []}
         self.totinstall = {'flownum': [], 'totinstall': []}
         self.pktnum = {'flownum': [], 'pktnum': []}
+        self.pktsize = {'flownum': [], 'pktsize': []}
         # self.predict = {'timeout': []}
 
         self.fct = {}
@@ -22,7 +23,7 @@ class Data:
         self.tail_fct = {}
         self.install_num = {}
 
-    def record(self, flownum, delay, totentry, overflow, pktin, totinstall, pktnum):
+    def record(self, flownum, delay, totentry, overflow, pktin, totinstall, pktnum, pktsize):
         self.delay['flownum'].append(flownum)
         self.delay['delay'].append(delay)
         self.totentry['flownum'].append(flownum)
@@ -35,6 +36,8 @@ class Data:
         self.totinstall['totinstall'].append(totinstall)
         self.pktnum['flownum'].append(flownum)
         self.pktnum['pktnum'].append(pktnum)
+        self.pktsize['flownum'].append(flownum)
+        self.pktsize['pktsize'].append(pktsize)
         return
 
     def record_fct(self, tp, pkttime, flowsize):
@@ -88,6 +91,8 @@ class Data:
             print(json.dumps(self.pktnum), file=f)
         with open(fileprefix+'_delay.json', 'w') as f:
             print(json.dumps(self.delay), file=f)
+        with open(fileprefix+'_pktsize.json', 'w') as f:
+            print(json.dumps(self.pktsize), file=f)
         # tail_fct_cdf = self.get_fct_cdf(self.tail_fct)
         # with open(fileprefix+'_tail_fct_cdf.json', 'w') as f:
         #     print(json.dumps(tail_fct_cdf), file=f)

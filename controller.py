@@ -66,7 +66,7 @@ class Controller:
                 self.shortest_pathes[src][dst] = [sp for (delay, sp) in spathes[dst]]
         return
 
-    def packet_in(self, label, pkt, curtime, mode=setting.MODE_DEFAULT):
+    def packet_in(self, label, pkt, reason, curtime, mode=setting.MODE_DEFAULT):
         if mode == setting.MODE_DEFAULT:  # install exact-match 5-tuple rules hop-by-hop
             return self.packet_in_default(label, pkt, curtime)
         elif mode == setting.MODE_SPATH:  # install exact-match 5-tuple rules on shortest-path
@@ -77,6 +77,8 @@ class Controller:
             return self.packet_in_idle(label, pkt, curtime)
         elif mode == setting.MODE_HYBRID:  # install hybrid timeout rules
             return self.packet_in_hybrid(label, pkt, curtime)
+        elif mode == setting.MODE_MINE:  # install mine timeout rules
+            return self.packet_in_mine(label, pkt, reason, curtime)
         else:
             raise NameError('Error. No such packet-in mode. Exit.')
 
@@ -240,6 +242,84 @@ class Controller:
             
         return instractions
 
+    def packet_in_mine(self, label, pkt, reason, curtime):
+        rule = self.ruleset.rules[pkt.dstip]
+        deprules = self.ruleset.depset[rule]
+
+        timeout = setting.DEFAULT_TIMEOUT
+        if self.predictor.name == setting.PREDICTOR_SIMPLE:
+            self.predictor.update((setting.INFO_PACKET_IN, label, curtime, rule))
+            timeout = self.predictor.predict(rule, curtime, label)
+            # with open('data/itm_timeout', 'a') as f:
+            #     print('{} {}'.format(rule,timeout), file=f)
+        if (self.predictor.name == setting.PREDICTOR_Q or 
+            self.predictor.name == setting.PREDICTOR_DQN):
+            timeout = self.predictor.predict(rule, curtime, label)
+            # with open('data/{}_timeout'.format(self.predictor.name), 'a') as f:
+            #     print('{} {}'.format(rule,timeout), file=f)           
+
+        instractions = []
+        dst = pkt.dst
+        path = self.shortest_pathes[label][dst][0]
+        if rule[0] == 32:
+            field = setting.FIELD_DSTIP
+            priority = 32
+        else:
+            field = setting.FIELD_DSTPREFIX[rule[0]]
+            priority = rule[0]
+        match_field = rule[1]
+
+        # 如果是no match就代表是新的封包，安裝timeout idle
+        if reason == setting.OFPR_NO_MATCH:
+            for cnt in range(len(path)-1):
+                action = [(setting.ACT_FWD, path[cnt+1])]
+                entry = element.Entry(field, priority, match_field, action, 
+                                    flag=setting.FLAG_REMOVE_NOTIFY, ts=curtime, 
+                                    timeout=timeout, timeout_type=setting.TIMEOUT_IDLE)
+                instractions.append((setting.INST_ADD, path[cnt], entry))
+                self.record_install(rule)
+        # 如果是action就代表有安裝過parent封包，就安裝timeout hard and set inf timeout
+        elif reason == setting.OFPR_ACTION:
+            for cnt in range(len(path)-1):
+                action = [(setting.ACT_FWD, path[cnt+1])]
+                entry = element.Entry(field, priority, match_field, action, 
+                        flag=setting.FLAG_REMOVE_NOTIFY, ts=curtime, 
+                        timeout=setting.INF, 
+                        timeout_type=setting.TIMEOUT_HARD)
+                instractions.append((setting.INST_ADD, path[cnt], entry))
+                self.record_install(rule)
+
+        # TODO check switch table to install /28 rule
+        for r in deprules:
+            if r[0] == 32:
+                field = setting.FIELD_DSTIP
+                priority = 32
+            elif r[0] == 28:
+                field = setting.FIELD_DSTPREFIX[r[0]]
+                priority = r[0]
+            else:
+                field = setting.FIELD_DSTPREFIX[r[0]]
+                priority = r[0]
+            match_field = r[1]
+            if r[0] == 28:
+                action = [(setting.ACT_FWD, setting.CTRL)]
+                entry = element.Entry(field, priority, match_field, action, 
+                                    flag=None, ts=curtime, 
+                                    timeout=setting.INF, 
+                                    timeout_type=setting.TIMEOUT_HARD)
+                instractions.append((setting.INST_ADD, path[0], entry))
+                self.record_install(r)
+            else:    
+                for cnt in range(len(path)-1):
+                    action = [(setting.ACT_FWD, path[cnt+1])]
+                    entry = element.Entry(field, priority, match_field, action, 
+                                        flag=None, ts=curtime, 
+                                        timeout=setting.INF, 
+                                        timeout_type=setting.TIMEOUT_HARD)
+                    instractions.append((setting.INST_ADD, path[cnt], entry))
+                    self.record_install(r)
+        return instractions
+
     def flow_removed(self, label, expire, overflow, curtime, mode=setting.MODE_DEFAULT):
         # update predictor
         if self.predictor.name == setting.PREDICTOR_SIMPLE:
@@ -259,6 +339,9 @@ class Controller:
                     setting.MODE_IDLE, setting.MODE_SPATH]:
             return []
         elif mode == setting.MODE_HYBRID:
+            return self.flow_removed_hybrid(label, expire, overflow, curtime)
+        elif mode == setting.MODE_MINE:
+            # TODO change hybrid into mine
             return self.flow_removed_hybrid(label, expire, overflow, curtime)
         else:
             raise NameError('Error. No such packet-in mode. Exit.')
