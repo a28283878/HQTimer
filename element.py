@@ -18,6 +18,7 @@ class Entry:
 
         if ts is not None:
             self.ts = ts
+            self.ts_last_trigger = ts
             self.timeout = timeout
             self.timeout_type = timeout_type
 
@@ -35,8 +36,8 @@ class Entry:
         s = 'filed:{}, priority:{}, match field:{}, action:{}, flag:{}, counter:{}'.format(
             self.field, self.priority, self.match_field, self.action, self.flag, self.counter)
         if hasattr(self, 'ts'):
-            s = '{}, ts:{}, timeout:{}, timeout type:{}'.format(
-                s, self.ts, self.timeout, self.timeout_type)
+            s = '{}, ts:{},ts_last_trigger:{}, timeout:{}, timeout type:{}'.format(
+                s, self.ts, self.ts_last_trigger, self.timeout, self.timeout_type)
         return s
 
     def print_entry(self, filename=None):

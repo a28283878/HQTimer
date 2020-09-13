@@ -41,7 +41,7 @@ class Ruleset:
             if rs[0] == 24:
                 for dep_rs in self.depset[rs]:
                     if dep_rs[0] == 28:
-                        self.dirdepset[rs] = list( set(self.depset[rs]) - set(self.depset[dep_rs]))
+                        self.dirdepset[rs] = list( set(self.dirdepset[rs]) - set(self.depset[dep_rs]))
                         
     # def get_direct_depset(self, maxdep):
     #     ruleset = sorted(self.ruleset, reverse=True)
@@ -104,9 +104,9 @@ class Ruleset:
             else:
                 self.rules[pkt.dstip] = (32, pkt.dstip)
                 self.ruleset.add((32, pkt.dstip))
-                
+
         self.get_depset(maxdep)
-        self.get_direct_depset(maxdep)
+        self.get_direct_depset()
 
         return
 

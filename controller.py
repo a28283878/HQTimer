@@ -17,11 +17,10 @@ class Controller:
         self.shortest_pathes = {label: {} for label in range(self.switch_num)}
         # 取得每個switch間的shortest_pathes()
         self.get_shortest_pathes()
-
+        self.parent_count = {label: {} for label in range(self.switch_num)}
         #匯入ruleset
         if ruleset_pkl is not None:
             self.ruleset = element.de_serialize(ruleset_pkl)
-
         self.install_num = {}
         self.predictor = None
 
@@ -238,6 +237,10 @@ class Controller:
                                       timeout=setting.INF, 
                                       timeout_type=setting.TIMEOUT_HARD)
                 instractions.append((setting.INST_ADD, path[cnt], entry))
+                if r in self.parent_count[path[cnt]]:
+                    self.parent_count[path[cnt]][r] += 1
+                else:
+                    self.parent_count[path[cnt]][r] = 1
                 self.record_install(r)
             
         return instractions
@@ -289,7 +292,6 @@ class Controller:
                 instractions.append((setting.INST_ADD, path[cnt], entry))
                 self.record_install(rule)
 
-        # TODO check switch table to install /28 rule
         for r in deprules:
             if r[0] == 32:
                 field = setting.FIELD_DSTIP
@@ -301,6 +303,7 @@ class Controller:
                 field = setting.FIELD_DSTPREFIX[r[0]]
                 priority = r[0]
             match_field = r[1]
+            # priority=28 則在ingress switch設為收到要packet in TODO 未來要改成判斷是否packet in
             if r[0] == 28:
                 action = [(setting.ACT_FWD, setting.CTRL)]
                 entry = element.Entry(field, priority, match_field, action, 
@@ -347,7 +350,7 @@ class Controller:
             raise NameError('Error. No such packet-in mode. Exit.')
 
     """def flow_removed_default(self, label, expire, overflow, curtime):
-        return []
+         return []
     """
 
     def flow_removed_hybrid(self, label, expire, overflow, curtime):
@@ -358,6 +361,27 @@ class Controller:
                 rule = (entry.priority, entry.match_field)
                 deprules = self.ruleset.depset[rule] # dependent ruleset
                 for r in deprules:
+                    self.parent_count[label][r] -= 1
+                    assert self.parent_count[label][r] >= 0
+                    if r[0] == 32:
+                        entry = element.Entry(setting.FIELD_DSTIP, 32, r[1], None) # exact match rule
+                    else:
+                        entry = element.Entry(setting.FIELD_DSTPREFIX[r[0]], r[0], r[1], None)
+                    instractions.append((setting.INST_DELETE, label, entry))
+        return instractions
+
+    def flow_removed_mine(self, label, expire, overflow, curtime):
+        instractions = []
+        deleted = expire + overflow
+        for entry in deleted:
+            if entry.timeout_type == setting.TIMEOUT_IDLE and entry.priority < 32:
+                # print('*remove dependency')
+                rule = (entry.priority, entry.match_field)
+                deprules = self.ruleset.depset[rule] # dependent ruleset
+                for r in deprules:
+                    self.parent_count[label][r] -= 1
+                    assert self.parent_count[label][r] >= 0
+                    if self.parent_count[label][r] > 0 or r in deleted: continue
                     if r[0] == 32:
                         entry = element.Entry(setting.FIELD_DSTIP, 32, r[1], None) # exact match rule
                     else:

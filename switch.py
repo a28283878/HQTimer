@@ -63,9 +63,9 @@ class Switch:
             for field in self.flow_table:
                 for match_field in self.flow_table[field]:
                     entry = self.flow_table[field][match_field]
-                    if entry.ts+entry.timeout <= now:
+                    if entry.ts_last_trigger+entry.timeout <= now:
                         to_remove.append(entry)
-                        #確認是否有FLAG_REMOVE_NOTIFY，timeout後要通知controller，若要就放進expire
+                        # 確認是否有FLAG_REMOVE_NOTIFY，timeout後要通知controller，若要就放進expire
                         if (entry.flag is not None and 
                             entry.flag == setting.FLAG_REMOVE_NOTIFY):
                             expire.append(entry)
@@ -82,7 +82,9 @@ class Switch:
             if now is not None:
                 # FIFO
                 # 由小到大刪除較久以前的flow
-                overflow = sorted(entry_list, key=lambda e: e.ts)[:(self.table_size-max_size)]
+                # overflow = sorted(entry_list, key=lambda e: e.ts)[:(self.table_size-max_size)]
+                # 其實是偽FIFO，使用LRU可是有dependency問題 TODO 之後要改成沒有dependency問題，會只刪除child rule沒有刪除parent rule
+				overflow = sorted(entry_list, key=lambda e: e.ts_last_trigger)[:(self.table_size-max_size)]
             else:
                 # LRU: remove least used rules. TODO
                 overflow = sorted(entry_list, key=lambda e: e.counter)[:(self.table_size-max_size)]
@@ -163,7 +165,7 @@ class Switch:
                 match_entry.ts is not None and 
                 match_entry.timeout_type == setting.TIMEOUT_IDLE):
                 
-                match_entry.ts = now
+                match_entry.ts_last_trigger = now
 
             return match_entry.action
 
