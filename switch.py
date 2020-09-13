@@ -84,7 +84,7 @@ class Switch:
                 # 由小到大刪除較久以前的flow
                 # overflow = sorted(entry_list, key=lambda e: e.ts)[:(self.table_size-max_size)]
                 # 其實是偽FIFO，使用LRU可是有dependency問題 TODO 之後要改成沒有dependency問題，會只刪除child rule沒有刪除parent rule
-				overflow = sorted(entry_list, key=lambda e: e.ts_last_trigger)[:(self.table_size-max_size)]
+                overflow = sorted(entry_list, key=lambda e: e.ts_last_trigger)[:(self.table_size-max_size)]
             else:
                 # LRU: remove least used rules. TODO
                 overflow = sorted(entry_list, key=lambda e: e.counter)[:(self.table_size-max_size)]
