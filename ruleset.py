@@ -42,7 +42,17 @@ class Ruleset:
                 for dep_rs in self.depset[rs]:
                     if dep_rs[0] == 28:
                         self.dirdepset[rs] = list( set(self.dirdepset[rs]) - set(self.depset[dep_rs]))
-                        
+        return
+
+    def get_rule_match(self):
+        for r in self.rules:
+            if self.rules[r][0] == 24:
+                attr = element.int2ip(element.get_ip_range(r, 28)[0])
+                rule = (28, attr)
+                if rule in self.ruleset:
+                    self.rules[r] = rule
+        return
+
     # def get_direct_depset(self, maxdep):
     #     ruleset = sorted(self.ruleset, reverse=True)
     #     count = 0
@@ -104,7 +114,7 @@ class Ruleset:
             else:
                 self.rules[pkt.dstip] = (32, pkt.dstip)
                 self.ruleset.add((32, pkt.dstip))
-
+        self.get_rule_match()
         self.get_depset(maxdep)
         self.get_direct_depset()
 
