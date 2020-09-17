@@ -18,6 +18,7 @@ class Controller:
         # 取得每個switch間的shortest_pathes()
         self.get_shortest_pathes()
         self.parent_count = {label: {} for label in range(self.switch_num)}
+        self.installed = {label: {} for label in range(self.switch_num)}
         #匯入ruleset
         if ruleset_pkl is not None:
             self.ruleset = element.de_serialize(ruleset_pkl)
@@ -248,7 +249,8 @@ class Controller:
     def packet_in_mine(self, label, pkt, reason, curtime):
         rule = self.ruleset.rules[pkt.dstip]
         deprules = self.ruleset.depset[rule]
-
+        dirdeprules = self.ruleset.dirdepset[rule]
+        #dirdeprules = deprules
         timeout = setting.DEFAULT_TIMEOUT
         if self.predictor.name == setting.PREDICTOR_SIMPLE:
             self.predictor.update((setting.INFO_PACKET_IN, label, curtime, rule))
@@ -280,6 +282,7 @@ class Controller:
                                     flag=setting.FLAG_REMOVE_NOTIFY, ts=curtime, 
                                     timeout=timeout, timeout_type=setting.TIMEOUT_IDLE)
                 instractions.append((setting.INST_ADD, path[cnt], entry))
+                self.installed[path[cnt]][rule] = True
                 self.record_install(rule)
         # 如果是action就代表有安裝過parent封包，就安裝timeout hard and set inf timeout
         elif reason == setting.OFPR_ACTION:
@@ -290,9 +293,10 @@ class Controller:
                         timeout=setting.INF, 
                         timeout_type=setting.TIMEOUT_HARD)
                 instractions.append((setting.INST_ADD, path[cnt], entry))
+                self.installed[path[cnt]][rule] = True
                 self.record_install(rule)
 
-        for r in deprules:
+        for r in dirdeprules:
             if r[0] == 32:
                 field = setting.FIELD_DSTIP
                 priority = 32
@@ -311,6 +315,10 @@ class Controller:
                                     timeout=setting.INF, 
                                     timeout_type=setting.TIMEOUT_HARD)
                 instractions.append((setting.INST_ADD, path[0], entry))
+                if r in self.parent_count[path[0]]:
+                    self.parent_count[path[0]][r] += 1
+                else:
+                    self.parent_count[path[0]][r] = 1
                 self.record_install(r)
             else:    
                 for cnt in range(len(path)-1):
@@ -320,6 +328,10 @@ class Controller:
                                         timeout=setting.INF, 
                                         timeout_type=setting.TIMEOUT_HARD)
                     instractions.append((setting.INST_ADD, path[cnt], entry))
+                    if r in self.parent_count[path[cnt]]:
+                        self.parent_count[path[cnt]][r] += 1
+                    else:
+                        self.parent_count[path[cnt]][r] = 1
                     self.record_install(r)
         return instractions
 
@@ -345,7 +357,7 @@ class Controller:
             return self.flow_removed_hybrid(label, expire, overflow, curtime)
         elif mode == setting.MODE_MINE:
             # TODO change hybrid into mine
-            return self.flow_removed_hybrid(label, expire, overflow, curtime)
+            return self.flow_removed_mine(label, expire, overflow, curtime)
         else:
             raise NameError('Error. No such packet-in mode. Exit.')
 
@@ -374,14 +386,15 @@ class Controller:
         instractions = []
         deleted = expire + overflow
         for entry in deleted:
-            if entry.timeout_type == setting.TIMEOUT_IDLE and entry.priority < 32:
+            if entry.timeout_type == setting.TIMEOUT_IDLE or entry.priority < 32:
                 # print('*remove dependency')
                 rule = (entry.priority, entry.match_field)
-                deprules = self.ruleset.depset[rule] # dependent ruleset
-                for r in deprules:
-                    self.parent_count[label][r] -= 1
-                    assert self.parent_count[label][r] >= 0
-                    if self.parent_count[label][r] > 0 or r in deleted: continue
+                dirdeprules = self.ruleset.dirdepset[rule] # dependent ruleset
+                # dirdeprules = self.ruleset.depset[rule]
+                for r in dirdeprules:
+                    # self.parent_count[label][r] -= 1
+                    # assert self.parent_count[label][r] >= 0
+                    # if self.parent_count[label][r] > 0 or r in deleted: continue
                     if r[0] == 32:
                         entry = element.Entry(setting.FIELD_DSTIP, 32, r[1], None) # exact match rule
                     else:
