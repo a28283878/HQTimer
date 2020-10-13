@@ -25,6 +25,10 @@ class Controller:
         self.install_num = {}
         self.predictor = None
 
+        self.hit_rate = {}
+        # switch info
+        self.switches = []
+
     def add_predictor(self, predictor_name):
         if predictor_name == setting.PREDICTOR_DEFAULT:
             self.predictor = predict.Predictor()
@@ -45,6 +49,81 @@ class Controller:
             self.install_num[rule] += 1
         else:
             self.install_num[rule] = 1
+
+    def record_hit_rate(self, rule):
+        if rule in self.hit_rate:
+            (d, c) = self.hit_rate[rule]
+            self.hit_rate[rule] = (d+1, c)
+        else:
+            self.hit_rate[rule] = (1,0)
+    
+    def dirdep_hit_rate(self, rule):
+        res = 0.0
+        dirdeprules = self.ruleset.dirdepset[rule]
+        if rule in self.hit_rate:
+            (tot_install, tot_hit) = self.hit_rate[rule]
+        else:
+            # 沒有安裝過的
+            return 0.9
+        for r in dirdeprules:
+            if r in self.hit_rate:
+                tot_install += self.hit_rate[r][0]
+                tot_hit += self.hit_rate[r][1]
+        return tot_hit/tot_install
+
+    def install_dirdeprule(self, rule, path, curtime):
+        # switch info
+        fullness = []
+        for sw_num in range(0,self.switch_num):
+            sw = self.switches[sw_num]
+            fullness.append(sw.table_size / setting.FLOW_TABLE_SIZE[sw.sw_type])
+            
+        instractions = []
+        dirdeprules = self.ruleset.dirdepset[rule]
+        for r in dirdeprules:
+            if r[0] == 32:
+                field = setting.FIELD_DSTIP
+                priority = 32
+            else:
+                field = setting.FIELD_DSTPREFIX[r[0]]
+                priority = r[0]
+            match_field = r[1]
+            # priority=28 則在ingress switch設為收到要packet in TODO 未來要改成判斷是否packet in
+            if r[0] == 28:
+                hit_rate = self.dirdep_hit_rate(r)
+                max_fullness = []
+                for sw in path[:-1]:
+                    max_fullness.append(fullness[sw])
+                max_fullness = max(max_fullness)
+                if max_fullness > hit_rate:
+                    action = [(setting.ACT_FWD, setting.CTRL)]
+                    entry = element.Entry(field, priority, match_field, action, 
+                                        flag=None, ts=curtime, 
+                                        timeout=setting.INF, 
+                                        timeout_type=setting.TIMEOUT_HARD)
+                    instractions.append((setting.INST_ADD, path[0], entry))
+                else:
+                    for cnt in range(len(path)-1):
+                        action = [(setting.ACT_FWD, path[cnt+1])]
+                        entry = element.Entry(field, priority, match_field, action, 
+                                            flag=None, ts=curtime, 
+                                            timeout=setting.INF, 
+                                            timeout_type=setting.TIMEOUT_HARD)
+                        instractions.append((setting.INST_ADD, path[cnt], entry))
+                        self.record_install(r)
+                        self.record_hit_rate(r)
+                    instractions += self.install_dirdeprule(r, path, curtime)
+            else:    
+                for cnt in range(len(path)-1):
+                    action = [(setting.ACT_FWD, path[cnt+1])]
+                    entry = element.Entry(field, priority, match_field, action, 
+                                        flag=None, ts=curtime, 
+                                        timeout=setting.INF, 
+                                        timeout_type=setting.TIMEOUT_HARD)
+                    instractions.append((setting.INST_ADD, path[cnt], entry))
+                    self.record_install(r)
+                    self.record_hit_rate(r)
+        return instractions
 
     # 計算封包傳輸的時間
     def get_delay(self, path, size=1500):  # maximum Ethernet frame (1500B)
@@ -247,21 +326,18 @@ class Controller:
         return instractions
 
     def packet_in_mine(self, label, pkt, reason, curtime):
+        # rule info
         rule = self.ruleset.rules[pkt.dstip]
         deprules = self.ruleset.depset[rule]
         dirdeprules = self.ruleset.dirdepset[rule]
-        #dirdeprules = deprules
+        
         timeout = setting.DEFAULT_TIMEOUT
         if self.predictor.name == setting.PREDICTOR_SIMPLE:
             self.predictor.update((setting.INFO_PACKET_IN, label, curtime, rule))
             timeout = self.predictor.predict(rule, curtime, label)
-            # with open('data/itm_timeout', 'a') as f:
-            #     print('{} {}'.format(rule,timeout), file=f)
         if (self.predictor.name == setting.PREDICTOR_Q or 
             self.predictor.name == setting.PREDICTOR_DQN):
-            timeout = self.predictor.predict(rule, curtime, label)
-            # with open('data/{}_timeout'.format(self.predictor.name), 'a') as f:
-            #     print('{} {}'.format(rule,timeout), file=f)           
+            timeout = self.predictor.predict(rule, curtime, label)      
 
         instractions = []
         dst = pkt.dst
@@ -284,6 +360,7 @@ class Controller:
                 instractions.append((setting.INST_ADD, path[cnt], entry))
                 self.installed[path[cnt]][rule] = True
                 self.record_install(rule)
+                self.record_hit_rate(rule)
         # 如果是action就代表有安裝過parent封包，就安裝timeout hard and set inf timeout
         elif reason == setting.OFPR_ACTION:
             for cnt in range(len(path)-1):
@@ -294,45 +371,11 @@ class Controller:
                         timeout_type=setting.TIMEOUT_HARD)
                 instractions.append((setting.INST_ADD, path[cnt], entry))
                 self.installed[path[cnt]][rule] = True
-                self.record_install(rule)
+                self.record_install(rule)       
+                self.record_hit_rate(rule)
 
-        for r in dirdeprules:
-            if r[0] == 32:
-                field = setting.FIELD_DSTIP
-                priority = 32
-            elif r[0] == 28:
-                field = setting.FIELD_DSTPREFIX[r[0]]
-                priority = r[0]
-            else:
-                field = setting.FIELD_DSTPREFIX[r[0]]
-                priority = r[0]
-            match_field = r[1]
-            # priority=28 則在ingress switch設為收到要packet in TODO 未來要改成判斷是否packet in
-            if r[0] == 28:
-                action = [(setting.ACT_FWD, setting.CTRL)]
-                entry = element.Entry(field, priority, match_field, action, 
-                                    flag=None, ts=curtime, 
-                                    timeout=setting.INF, 
-                                    timeout_type=setting.TIMEOUT_HARD)
-                instractions.append((setting.INST_ADD, path[0], entry))
-                if r in self.parent_count[path[0]]:
-                    self.parent_count[path[0]][r] += 1
-                else:
-                    self.parent_count[path[0]][r] = 1
-                self.record_install(r)
-            else:    
-                for cnt in range(len(path)-1):
-                    action = [(setting.ACT_FWD, path[cnt+1])]
-                    entry = element.Entry(field, priority, match_field, action, 
-                                        flag=None, ts=curtime, 
-                                        timeout=setting.INF, 
-                                        timeout_type=setting.TIMEOUT_HARD)
-                    instractions.append((setting.INST_ADD, path[cnt], entry))
-                    if r in self.parent_count[path[cnt]]:
-                        self.parent_count[path[cnt]][r] += 1
-                    else:
-                        self.parent_count[path[cnt]][r] = 1
-                    self.record_install(r)
+        instractions += self.install_dirdeprule(rule, path, curtime)
+                
         return instractions
 
     def flow_removed(self, label, expire, overflow, curtime, mode=setting.MODE_DEFAULT):
@@ -356,7 +399,6 @@ class Controller:
         elif mode == setting.MODE_HYBRID:
             return self.flow_removed_hybrid(label, expire, overflow, curtime)
         elif mode == setting.MODE_MINE:
-            # TODO change hybrid into mine
             return self.flow_removed_mine(label, expire, overflow, curtime)
         else:
             raise NameError('Error. No such packet-in mode. Exit.')
@@ -385,16 +427,22 @@ class Controller:
     def flow_removed_mine(self, label, expire, overflow, curtime):
         instractions = []
         deleted = expire + overflow
+
+        # update hit rate
+        for entry in deleted:
+            rule = (entry.priority, entry.match_field)
+            (install, counter) = self.hit_rate[rule]
+            if entry.counter >= 0:
+                n_counter = counter + 1
+            self.hit_rate[rule] = (install, n_counter)
+
         for entry in deleted:
             if entry.timeout_type == setting.TIMEOUT_IDLE or entry.priority < 32:
                 # print('*remove dependency')
                 rule = (entry.priority, entry.match_field)
-                dirdeprules = self.ruleset.dirdepset[rule] # dependent ruleset
-                # dirdeprules = self.ruleset.depset[rule]
-                for r in dirdeprules:
-                    # self.parent_count[label][r] -= 1
-                    # assert self.parent_count[label][r] >= 0
-                    # if self.parent_count[label][r] > 0 or r in deleted: continue
+                # dirdeprules = self.ruleset.dirdepset[rule] # dependent ruleset
+                deprules = self.ruleset.depset[rule]
+                for r in deprules:
                     if r[0] == 32:
                         entry = element.Entry(setting.FIELD_DSTIP, 32, r[1], None) # exact match rule
                     else:

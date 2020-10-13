@@ -82,7 +82,7 @@ def pre_rule_mask(mask_rate):
     print('single: generating rule set...')
 
     traffic_pkl = setting.SINGLE_TRAFFIC_LOGFILE
-    rate_arr = [0.2, 0.4, 0.6]
+    rate_arr = [0.4]
     for rate in rate_arr:
         rate = round(rate, 1)
         ruleset_pkl = 'single_rule_{}_mask_24-{}_28-{}.pkl'.format(rate, round(mask_rate,1), round(1-mask_rate,1))
@@ -222,4 +222,5 @@ def bridge_pre_traffic():
     pre_bridge(pkl_file)
 
 if __name__ == '__main__':
-    pre_rule_mask(0.8)
+    pre_rule_mask(0.4)
+    pre_rule_mask(0.2)

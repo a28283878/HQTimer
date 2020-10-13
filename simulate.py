@@ -147,9 +147,10 @@ def simulate(para):
                     c.predictor.save_weights(log_prefix)
 
     d.record_install_num(c.install_num)
-
     d.print_data(log_prefix)
-
+    with open('hitrate.txt', 'w') as f:
+        for rule in c.hit_rate:
+            print('{} {}'.format(rule, c.hit_rate[rule]), file=f)
     if 'save_model' in para:
         c.predictor.save_model(log_prefix)
 

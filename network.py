@@ -28,6 +28,7 @@ class Network:
             self.switches[label].set_sw_type(setting.TYPE_SOFTWARE)
 
         self.controller = controller.Controller(topo, soft_labels, ruleset_pkl) #設定controller
+        self.controller.switches = self.switches
         self.traffic = traffic.Traffic()
 
     def generate_random_traffic(self, traffic_mat, total, burst_max=1, exp=1, pktsize=1500):
