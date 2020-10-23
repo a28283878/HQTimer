@@ -17,6 +17,7 @@ class Switch:
         self.table_size = 0
 
         self.default_action = [(setting.ACT_FWD, setting.CTRL)]
+        self.ruleset = element.de_serialize(setting.SINGLE_RULE_PKL)
 
     def get_entry_list(self):
         entry_list = []
@@ -85,9 +86,45 @@ class Switch:
                 # overflow = sorted(entry_list, key=lambda e: e.ts)[:(self.table_size-max_size)]
                 # 其實是偽FIFO，使用LRU可是有dependency問題 TODO 之後要改成沒有dependency問題，會只刪除child rule沒有刪除parent rule
                 overflow = sorted(entry_list, key=lambda e: e.ts_last_trigger)[:(self.table_size-max_size)]
+
+                # overflow = []
+                # evict_n = self.table_size - max_size
+                # entry_list = sorted(entry_list, key=lambda e: e.ts_last_trigger)
+                # for entry in entry_list:
+                #     if len(overflow) >= evict_n: break
+                #     if entry.timeout_type == setting.TIMEOUT_IDLE:
+                #         overflow.append(entry)
+                #         rule = (entry.priority, entry.match_field)
+                #         deprules = self.ruleset.depset[rule]
+                #         for r in deprules:
+                #             if r[0] == 32:
+                #                 field = setting.FIELD_DSTIP
+                #             else:
+                #                 field = setting.FIELD_DSTPREFIX[r[0]]
+                #             # check if this rule is in flowtable
+                #             if field in self.flow_table:
+                #                 if r[1] in self.flow_table[field]:
+                #                     overflow.append(self.flow_table[field][r[1]])
             else:
-                # LRU: remove least used rules. TODO
-                overflow = sorted(entry_list, key=lambda e: e.counter)[:(self.table_size-max_size)]
+                # LRU: remove least used rules.
+                overflow = []
+                evict_n = self.table_size - max_size
+                entry_list = sorted(entry_list, key=lambda e: e.ts_last_trigger)
+                for entry in entry_list:
+                    if len(overflow) >= evict_n: break
+                    if entry.timeout_type == setting.TIMEOUT_IDLE:
+                        overflow.append(entry)
+                        rule = (entry.priority, entry.match_field)
+                        deprules = self.ruleset.depset[rule]
+                        for r in deprules:
+                            if r[0] == 32:
+                                field = setting.FIELD_DSTIP
+                            else:
+                                field = setting.FIELD_DSTPREFIX[r[0]]
+                            # check if this rule is in flowtable
+                            if field in self.flow_table:
+                                if r[1] in self.flow_table[field]:
+                                    overflow.append(self.flow_table[field][r[1]])
             for entry in overflow:
                 self.delete_entry(entry)
         
@@ -109,14 +146,15 @@ class Switch:
                 if entry.priority >= old_entry.priority:
                     # print('**overwrite entry at s{}:\n{}'.format(self.label, entry))                    
                     self.flow_table[entry.field][entry.match_field] = entry
-                return 0
+                    return old_entry
+                return None
 
         """update the flow table manually
         [expire, overflow] = self.update(now)"""
         add_fast_entry(entry)
         self.table_size += 1
         # print('**add entry at s{}:\n{}'.format(self.label, entry))
-        return 0
+        return None
 
     def get_match_entry(self, pkt):
         match_entry = element.Entry(None, -1, None, None)
@@ -162,8 +200,7 @@ class Switch:
         else:
             match_entry.counter += 1
             if (now is not None and
-                match_entry.ts is not None and 
-                match_entry.timeout_type == setting.TIMEOUT_IDLE):
+                match_entry.ts_last_trigger is not None):
                 
                 match_entry.ts_last_trigger = now
 

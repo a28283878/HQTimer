@@ -10,10 +10,10 @@ import setting
 
 
 class Network:
-    def __init__(self, topo, soft_labels=None, ruleset_pkl=None):
+    def __init__(self, topo, mode, soft_labels=None, ruleset_pkl=None):
         #ruleset_pkl:儲存ruleset的資訊
         self.topo = topo
-        
+        self.mode = mode
         self.switch_num = len(topo)
         self.switches = []
         # 依據topo增加switch，例如single就會增加switch 0,1,2
@@ -129,7 +129,7 @@ class Network:
                 sw = self.switches[obj]
                 entry = sw.add_entry(cont)
                 # old entry is update with new one, update hit rate to make sure hit rate record is correct.
-                if entry is not None:
+                if self.mode == setting.MODE_MINE and entry is not None:
                     rule = (entry.priority, entry.match_field)
                     (install, counter) = self.controller.hit_rate[rule]
                     n_counter = counter
