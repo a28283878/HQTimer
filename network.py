@@ -127,7 +127,15 @@ class Network:
             # add entry
             if act == setting.INST_ADD:
                 sw = self.switches[obj]
-                sw.add_entry(cont)
+                entry = sw.add_entry(cont)
+                # old entry is update with new one, update hit rate to make sure hit rate record is correct.
+                if entry is not None:
+                    rule = (entry.priority, entry.match_field)
+                    (install, counter) = self.controller.hit_rate[rule]
+                    n_counter = counter
+                    if entry.counter >= 0:
+                        n_counter = counter + 1
+                    self.controller.hit_rate[rule] = (install, n_counter)
             # delete entry
             elif act == setting.INST_DELETE:
                 sw = self.switches[obj]

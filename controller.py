@@ -17,7 +17,6 @@ class Controller:
         self.shortest_pathes = {label: {} for label in range(self.switch_num)}
         # 取得每個switch間的shortest_pathes()
         self.get_shortest_pathes()
-        self.parent_count = {label: {} for label in range(self.switch_num)}
         self.installed = {label: {} for label in range(self.switch_num)}
         #匯入ruleset
         if ruleset_pkl is not None:
@@ -88,7 +87,7 @@ class Controller:
                 field = setting.FIELD_DSTPREFIX[r[0]]
                 priority = r[0]
             match_field = r[1]
-            # priority=28 則在ingress switch設為收到要packet in TODO 未來要改成判斷是否packet in
+            # priority=28 則在ingress switch設為收到要packet in
             if r[0] == 28:
                 hit_rate = self.dirdep_hit_rate(r)
                 max_fullness = []
@@ -317,10 +316,6 @@ class Controller:
                                       timeout=setting.INF, 
                                       timeout_type=setting.TIMEOUT_HARD)
                 instractions.append((setting.INST_ADD, path[cnt], entry))
-                if r in self.parent_count[path[cnt]]:
-                    self.parent_count[path[cnt]][r] += 1
-                else:
-                    self.parent_count[path[cnt]][r] = 1
                 self.record_install(r)
             
         return instractions
@@ -415,8 +410,7 @@ class Controller:
                 rule = (entry.priority, entry.match_field)
                 deprules = self.ruleset.depset[rule] # dependent ruleset
                 for r in deprules:
-                    self.parent_count[label][r] -= 1
-                    assert self.parent_count[label][r] >= 0
+
                     if r[0] == 32:
                         entry = element.Entry(setting.FIELD_DSTIP, 32, r[1], None) # exact match rule
                     else:
@@ -432,8 +426,9 @@ class Controller:
         for entry in deleted:
             rule = (entry.priority, entry.match_field)
             (install, counter) = self.hit_rate[rule]
+            n_counter = counter
             if entry.counter >= 0:
-                n_counter = counter + 1
+                n_counter = n_counter + 1
             self.hit_rate[rule] = (install, n_counter)
 
         for entry in deleted:
