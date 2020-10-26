@@ -8,11 +8,11 @@ import setting
 
 
 class Switch:
-    def __init__(self, label, sw_type=setting.TYPE_HARDWARE):
+    def __init__(self, label, mode, sw_type=setting.TYPE_HARDWARE):
         # switch的編號
         self.label = label
         self.sw_type = sw_type
-
+        self.mode = mode
         self.flow_table = {}
         self.table_size = 0
 
@@ -64,7 +64,13 @@ class Switch:
             for field in self.flow_table:
                 for match_field in self.flow_table[field]:
                     entry = self.flow_table[field][match_field]
-                    if entry.ts_last_trigger+entry.timeout <= now:
+                    if entry.timeout_type == setting.TIMEOUT_IDLE and entry.ts_last_trigger+entry.timeout <= now:
+                        to_remove.append(entry)
+                        # 確認是否有FLAG_REMOVE_NOTIFY，timeout後要通知controller，若要就放進expire
+                        if (entry.flag is not None and 
+                            entry.flag == setting.FLAG_REMOVE_NOTIFY):
+                            expire.append(entry)
+                    elif ( entry.timeout_type == setting.TIMEOUT_HARD or entry.timeout_type == setting.TIMEOUT_HARD_LEAD ) and entry.ts+entry.timeout <= now:
                         to_remove.append(entry)
                         # 確認是否有FLAG_REMOVE_NOTIFY，timeout後要通知controller，若要就放進expire
                         if (entry.flag is not None and 
@@ -80,51 +86,34 @@ class Switch:
         overflow = []
         if self.table_size >= max_size:
             entry_list = self.get_entry_list()
-            if now is not None:
-                # FIFO
-                # 由小到大刪除較久以前的flow
-                # overflow = sorted(entry_list, key=lambda e: e.ts)[:(self.table_size-max_size)]
-                # 其實是偽FIFO，使用LRU可是有dependency問題 TODO 之後要改成沒有dependency問題，會只刪除child rule沒有刪除parent rule
-                overflow = sorted(entry_list, key=lambda e: e.ts_last_trigger)[:(self.table_size-max_size)]
-
-                # overflow = []
-                # evict_n = self.table_size - max_size
-                # entry_list = sorted(entry_list, key=lambda e: e.ts_last_trigger)
-                # for entry in entry_list:
-                #     if len(overflow) >= evict_n: break
-                #     if entry.timeout_type == setting.TIMEOUT_IDLE:
-                #         overflow.append(entry)
-                #         rule = (entry.priority, entry.match_field)
-                #         deprules = self.ruleset.depset[rule]
-                #         for r in deprules:
-                #             if r[0] == 32:
-                #                 field = setting.FIELD_DSTIP
-                #             else:
-                #                 field = setting.FIELD_DSTPREFIX[r[0]]
-                #             # check if this rule is in flowtable
-                #             if field in self.flow_table:
-                #                 if r[1] in self.flow_table[field]:
-                #                     overflow.append(self.flow_table[field][r[1]])
-            else:
-                # LRU: remove least used rules.
-                overflow = []
-                evict_n = self.table_size - max_size
-                entry_list = sorted(entry_list, key=lambda e: e.ts_last_trigger)
-                for entry in entry_list:
-                    if len(overflow) >= evict_n: break
-                    if entry.timeout_type == setting.TIMEOUT_IDLE:
-                        overflow.append(entry)
-                        rule = (entry.priority, entry.match_field)
-                        deprules = self.ruleset.depset[rule]
-                        for r in deprules:
-                            if r[0] == 32:
-                                field = setting.FIELD_DSTIP
-                            else:
-                                field = setting.FIELD_DSTPREFIX[r[0]]
-                            # check if this rule is in flowtable
-                            if field in self.flow_table:
-                                if r[1] in self.flow_table[field]:
-                                    overflow.append(self.flow_table[field][r[1]])
+            overflow = sorted(entry_list, key=lambda e: e.ts_last_trigger)[:(self.table_size-max_size)]
+            # TODO:MINE
+            # if self.mode == setting.MODE_IDLE:
+            #     # FIFO
+            #     # 由小到大刪除較久以前的flow
+            #     overflow = sorted(entry_list, key=lambda e: e.ts)[:(self.table_size-max_size)]
+            #     # 其實是偽FIFO，使用LRU可是有dependency問題 TODO 之後要改成沒有dependency問題，會只刪除child rule沒有刪除parent rule
+            #     #overflow = sorted(entry_list, key=lambda e: e.ts_last_trigger)[:(self.table_size-max_size)]
+            # else:
+            #     # LRU: remove least used rules.
+            #     overflow = []
+            #     evict_n = self.table_size - max_size
+            #     entry_list = sorted(entry_list, key=lambda e: e.ts_last_trigger)
+            #     for entry in entry_list:
+            #         if len(overflow) >= evict_n: break
+            #         if entry.timeout_type == setting.TIMEOUT_IDLE or entry.timeout_type == setting.TIMEOUT_HARD_LEAD:
+            #             overflow.append(entry)
+            #             rule = (entry.priority, entry.match_field)
+            #             deprules = self.ruleset.depset[rule]
+            #             for r in deprules:
+            #                 if r[0] == 32:
+            #                     field = setting.FIELD_DSTIP
+            #                 else:
+            #                     field = setting.FIELD_DSTPREFIX[r[0]]
+            #                 # check if this rule is in flowtable
+            #                 if field in self.flow_table:
+            #                     if r[1] in self.flow_table[field]:
+            #                         overflow.append(self.flow_table[field][r[1]])
             for entry in overflow:
                 self.delete_entry(entry)
         
@@ -201,8 +190,17 @@ class Switch:
             match_entry.counter += 1
             if (now is not None and
                 match_entry.ts_last_trigger is not None):
-                
                 match_entry.ts_last_trigger = now
+                # TODO:MINE
+                # if self.mode == setting.MODE_MINE or self.mode == setting.MODE_HYBRID:
+                #     if match_entry.timeout_type != setting.TIMEOUT_IDLE or match_entry.timeout_type != setting.TIMEOUT_HARD_LEAD:
+                #         ip24 = element.int2ip(element.get_ip_range(match_entry.match_field, 24)[0])
+                #         ip28 = element.int2ip(element.get_ip_range(match_entry.match_field, 28)[0])
+                #         if setting.FIELD_DSTPREFIX[24] in self.flow_table:
+                #             if ip24 in self.flow_table[setting.FIELD_DSTPREFIX[24]]: self.flow_table[setting.FIELD_DSTPREFIX[24]][ip24].ts_last_trigger = now
+                #         elif setting.FIELD_DSTPREFIX[28] in self.flow_table:
+                #             if ip28 in self.flow_table[setting.FIELD_DSTPREFIX[28]]: self.flow_table[setting.FIELD_DSTPREFIX[28]][ip28].ts_last_trigger = now
+
 
             return match_entry.action
 
