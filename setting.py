@@ -32,6 +32,7 @@ INST_OBJ_ENTRY = -3005
 
 TIMEOUT_HARD = 0
 TIMEOUT_IDLE = 1
+TIMEOUT_HARD_LEAD = 2
 
 FLAG_REMOVE_NOTIFY = -4000
 
@@ -174,7 +175,7 @@ SINGLE_SW_LIST = [0, 2]
 SINGLE_TRAFFIC_LOGFILE = 'single.pkl'
 SINGLE_TRAFFIC_DATA = 'single.json'
 #SINGLE_RULE_PKL = 'single_rule_0.6.pkl'
-SINGLE_RULE_PKL = 'single_rule_0.6_mask_24-0.4_28-0.6.pkl'
+SINGLE_RULE_PKL = 'single_rule_0.6_mask_24-0.8_28-0.2.pkl'
 
 
 """germany50

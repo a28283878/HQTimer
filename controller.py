@@ -245,7 +245,7 @@ class Controller:
             action = [(setting.ACT_FWD, path[cnt+1])]
             entry = element.Entry(field, priority, match_field, action, 
                                   flag=setting.FLAG_REMOVE_NOTIFY, ts=curtime, 
-                                  timeout=timeout, timeout_type=setting.TIMEOUT_HARD)
+                                  timeout=timeout, timeout_type=setting.TIMEOUT_HARD_LEAD)
             instractions.append((setting.INST_ADD, path[cnt], entry))
             self.record_install(rule)
 
@@ -275,14 +275,9 @@ class Controller:
         if self.predictor.name == setting.PREDICTOR_SIMPLE:
             self.predictor.update((setting.INFO_PACKET_IN, label, curtime, rule))
             timeout = self.predictor.predict(rule, curtime, label)
-            # with open('data/itm_timeout', 'a') as f:
-            #     print('{} {}'.format(rule,timeout), file=f)
         if (self.predictor.name == setting.PREDICTOR_Q or 
             self.predictor.name == setting.PREDICTOR_DQN):
             timeout = self.predictor.predict(rule, curtime, label)
-            # with open('data/{}_timeout'.format(self.predictor.name), 'a') as f:
-            #     print('{} {}'.format(rule,timeout), file=f)           
-
         instractions = []
         dst = pkt.dst
         path = self.shortest_pathes[label][dst][0]
@@ -425,7 +420,9 @@ class Controller:
         # update hit rate
         for entry in deleted:
             rule = (entry.priority, entry.match_field)
-            (install, counter) = self.hit_rate[rule]
+            (install, counter) = (1,0)
+            # TODO don't know why, 有極少的機會會出現 hitrate 裡面沒有紀錄，所以在判斷一次
+            if rule in self.hit_rate: (install, counter) = self.hit_rate[rule]
             n_counter = counter
             if entry.counter >= 0:
                 n_counter = n_counter + 1

@@ -297,7 +297,7 @@ def single(mode, predictor_name, max_flownum=None):
     }
 
     topo = setting.SINGLE
-    n = network.Network(topo, timeout_type, soft_labels=None, ruleset_pkl=setting.SINGLE_RULE_PKL)
+    n = network.Network(topo, mode, soft_labels=None, ruleset_pkl=setting.SINGLE_RULE_PKL)
     n.generate_log_traffic(setting.SINGLE_TRAFFIC_LOGFILE)
     
     log_prefix = './data/single_{}_{}_{}'.format(timeout_type[mode], 

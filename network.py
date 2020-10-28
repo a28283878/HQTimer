@@ -18,7 +18,7 @@ class Network:
         self.switches = []
         # 依據topo增加switch，例如single就會增加switch 0,1,2
         for label in range(self.switch_num):
-            self.switches.append(switch.Switch(label))
+            self.switches.append(switch.Switch(label, mode))
 
         # 沒有soft_label會預設sw_type = TYPE_HARDWARE
         self.soft_labels = soft_labels
