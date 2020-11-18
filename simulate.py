@@ -148,9 +148,10 @@ def simulate(para):
 
     d.record_install_num(c.install_num)
     d.print_data(log_prefix)
-    with open('hitrate.txt', 'a') as f:
-        for rule in c.hit_rate:
-            print('{} {}'.format(rule, c.hit_rate[rule]), file=f)
+    with open('dep_usage.txt', 'a') as f:
+        for i in range(len(n.switches[1].dep_count)):
+            if n.switches[1].dep_count[i] > 0:
+                print('{} {}'.format(n.switches[1].dep_count[i], n.switches[1].dep_triggered_count[i]), file=f)
     if 'save_model' in para:
         c.predictor.save_model(log_prefix)
 

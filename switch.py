@@ -15,10 +15,12 @@ class Switch:
         self.mode = mode
         self.flow_table = {}
         self.table_size = 0
-        self.fix_dep_pro = False
+        self.fix_dep_pro = True
         self.default_action = [(setting.ACT_FWD, setting.CTRL)]
         self.ruleset = element.de_serialize(setting.SINGLE_RULE_PKL)
         self.parent = {}
+        self.dep_count = []
+        self.dep_triggered_count = []
 
         for rp in self.ruleset.dirdepset:
             if self.ruleset.dirdepset[rp] is not None:
@@ -78,6 +80,28 @@ class Switch:
                         if (entry.flag is not None and 
                             entry.flag == setting.FLAG_REMOVE_NOTIFY):
                             expire.append(entry)
+                        ###
+                        rule = (entry.priority, entry.match_field)
+                        deprules = self.ruleset.depset[rule]                   
+                        total_count = 0
+                        not_triggered_count = 0
+                        for r in deprules:
+                            if r[0] == 32:
+                                f = setting.FIELD_DSTIP
+                            else:
+                                f = setting.FIELD_DSTPREFIX[r[0]]
+                            # check if this rule is in flowtable
+                            if f in self.flow_table:
+                                if r[1] in self.flow_table[f]:
+                                    total_count += 1
+                                    if self.flow_table[f][r[1]].counter > 0: not_triggered_count += 1
+                        self.dep_count.append(total_count)
+                        self.dep_triggered_count.append(not_triggered_count)
+                        ###
+
+
+
+
                     elif ( entry.timeout_type == setting.TIMEOUT_HARD or entry.timeout_type == setting.TIMEOUT_HARD_LEAD ) and entry.ts+entry.timeout <= now:
                         to_remove.append(entry)
                         if (entry.flag is not None and 
@@ -117,6 +141,8 @@ class Switch:
                         if entry.timeout_type == setting.TIMEOUT_IDLE or entry.timeout_type == setting.TIMEOUT_HARD_LEAD:
                             overflow.append(entry)
                             rule = (entry.priority, entry.match_field)
+                            total_count = 0
+                            not_triggered_count = 0
                             deprules = self.ruleset.depset[rule]
                             for r in deprules:
                                 if r[0] == 32:
@@ -127,6 +153,10 @@ class Switch:
                                 if field in self.flow_table:
                                     if r[1] in self.flow_table[field]:
                                         overflow.append(self.flow_table[field][r[1]])
+                                        total_count += 1
+                                        if self.flow_table[field][r[1]].counter > 0: not_triggered_count += 1
+                            self.dep_count.append(total_count)
+                            self.dep_triggered_count.append(not_triggered_count)
                 else: 
                     overflow = sorted(entry_list, key=lambda e: e.ts_last_trigger)[:(self.table_size-max_size)]
             # # #

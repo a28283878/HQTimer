@@ -133,7 +133,7 @@ class Network:
                     rule = (entry.priority, entry.match_field)
                     (install, counter) = self.controller.hit_rate[rule]
                     n_counter = counter
-                    if entry.counter >= 0:
+                    if entry.counter > 0:
                         n_counter = counter + 1
                     self.controller.hit_rate[rule] = (install, n_counter)
             # delete entry

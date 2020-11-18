@@ -424,7 +424,7 @@ class Controller:
             # TODO don't know why, 有極少的機會會出現 hitrate 裡面沒有紀錄，所以在判斷一次
             if rule in self.hit_rate: (install, counter) = self.hit_rate[rule]
             n_counter = counter
-            if entry.counter >= 0:
+            if entry.counter > 0:
                 n_counter = n_counter + 1
             self.hit_rate[rule] = (install, n_counter)
 
