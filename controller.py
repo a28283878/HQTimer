@@ -5,6 +5,7 @@ from __future__ import print_function
 import element
 import setting
 import predict
+import time
 
 
 class Controller:
@@ -12,6 +13,8 @@ class Controller:
         self.topo = topo
         self.switch_num = len(topo)
         self.soft_labels = soft_labels
+        self.locality = True
+        self.avg_hitrate = True
 
         # shortest_pathes : 例如3個switch，就會產生{0: {}, 1: {}, 2: {}}
         self.shortest_pathes = {label: {} for label in range(self.switch_num)}
@@ -22,8 +25,12 @@ class Controller:
         if ruleset_pkl is not None:
             self.ruleset = element.de_serialize(ruleset_pkl)
         self.install_num = {}
+        self.dep_install_num = {}
+        self.packetin_process_time = []
         self.predictor = None
-
+        self.tot_install = 0
+        self.tot_hit = 0
+        self.loop_times = 1
         self.hit_rate = {}
         # switch info
         self.switches = []
@@ -49,25 +56,46 @@ class Controller:
         else:
             self.install_num[rule] = 1
 
+    def record_dep_install(self, rule, num):
+        if rule in self.dep_install_num: 
+            self.dep_install_num[rule] += num
+        else:
+            self.dep_install_num[rule] = num
+
     def record_hit_rate(self, rule):
         if rule in self.hit_rate:
             (d, c) = self.hit_rate[rule]
+            self.tot_install += 1
             self.hit_rate[rule] = (d+1, c)
         else:
+            self.tot_install += 1
             self.hit_rate[rule] = (1,0)
     
     def dirdep_hit_rate(self, rule):
-        res = 0.0
         dirdeprules = self.ruleset.dirdepset[rule]
+        tot_install = 0
+        tot_hit = 0
         if rule in self.hit_rate:
             (tot_install, tot_hit) = self.hit_rate[rule]
         else:
             # 沒有安裝過的
-            return 0.9
+            if self.avg_hitrate == False: return 0.9
+            return self.tot_hit/self.tot_install
         for r in dirdeprules:
             if r in self.hit_rate:
                 tot_install += self.hit_rate[r][0]
                 tot_hit += self.hit_rate[r][1]
+        return tot_hit/tot_install
+
+    def onlyself_hit_rate(self, rule):
+        tot_install = 0
+        tot_hit = 0
+        if rule in self.hit_rate:
+            (tot_install, tot_hit) = self.hit_rate[rule]
+        else:
+            if self.avg_hitrate == False: return 0.9
+            tot_install = self.tot_install
+            tot_hit = self.tot_hit
         return tot_hit/tot_install
 
     def install_dirdeprule(self, rule, path, curtime):
@@ -89,7 +117,8 @@ class Controller:
             match_field = r[1]
             # priority=28 則在ingress switch設為收到要packet in
             if r[0] == 28:
-                hit_rate = self.dirdep_hit_rate(r)
+                if self.locality == True : hit_rate = self.dirdep_hit_rate(r)
+                else : hit_rate = self.onlyself_hit_rate(r)
                 max_fullness = []
                 for sw in path[:-1]:
                     max_fullness.append(fullness[sw])
@@ -231,39 +260,46 @@ class Controller:
             self.predictor.name == setting.PREDICTOR_DQN):
             timeout = self.predictor.predict(rule, curtime, label)
 
-        instractions = []
-        dst = pkt.dst
-        path = self.shortest_pathes[label][dst][0]    
-        if rule[0] == 32:
-            field = setting.FIELD_DSTIP
-            priority = 32
-        else:
-            field = setting.FIELD_DSTPREFIX[rule[0]]
-            priority = rule[0]
-        match_field = rule[1]
-        for cnt in range(len(path)-1):
-            action = [(setting.ACT_FWD, path[cnt+1])]
-            entry = element.Entry(field, priority, match_field, action, 
-                                  flag=setting.FLAG_REMOVE_NOTIFY, ts=curtime, 
-                                  timeout=timeout, timeout_type=setting.TIMEOUT_HARD_LEAD)
-            instractions.append((setting.INST_ADD, path[cnt], entry))
-            self.record_install(rule)
-
-        for r in deprules:
-            if r[0] == 32:
-                field = setting.FIELD_DSTIP # fwd to exact ip
+               
+        start = time.time()
+        for count in range(0,self.loop_times):
+            instractions = []
+            dst = pkt.dst
+            path = self.shortest_pathes[label][dst][0]    
+            if rule[0] == 32:
+                field = setting.FIELD_DSTIP
                 priority = 32
             else:
-                field = setting.FIELD_DSTPREFIX[r[0]]
-                priority = r[0]
-            match_field = r[1]
+                field = setting.FIELD_DSTPREFIX[rule[0]]
+                priority = rule[0]
+            match_field = rule[1]
             for cnt in range(len(path)-1):
                 action = [(setting.ACT_FWD, path[cnt+1])]
                 entry = element.Entry(field, priority, match_field, action, 
-                                      flag=None, ts=curtime, 
-                                      timeout=timeout, timeout_type=setting.TIMEOUT_HARD)
+                                    flag=setting.FLAG_REMOVE_NOTIFY, ts=curtime, 
+                                    timeout=timeout, timeout_type=setting.TIMEOUT_HARD_LEAD)
                 instractions.append((setting.INST_ADD, path[cnt], entry))
-                self.record_install(r)
+                self.record_install(rule)
+
+            for r in deprules:
+                if r[0] == 32:
+                    field = setting.FIELD_DSTIP # fwd to exact ip
+                    priority = 32
+                else:
+                    field = setting.FIELD_DSTPREFIX[r[0]]
+                    priority = r[0]
+                match_field = r[1]
+                for cnt in range(len(path)-1):
+                    action = [(setting.ACT_FWD, path[cnt+1])]
+                    entry = element.Entry(field, priority, match_field, action, 
+                                        flag=None, ts=curtime, 
+                                        timeout=timeout, timeout_type=setting.TIMEOUT_HARD)
+                    instractions.append((setting.INST_ADD, path[cnt], entry))
+                    self.record_install(r)
+            self.record_dep_install(rule, len(instractions))
+        end = time.time()
+        process_time = end - start
+        self.packetin_process_time.append(process_time)
 
         return instractions
 
@@ -278,41 +314,47 @@ class Controller:
         if (self.predictor.name == setting.PREDICTOR_Q or 
             self.predictor.name == setting.PREDICTOR_DQN):
             timeout = self.predictor.predict(rule, curtime, label)
-        instractions = []
-        dst = pkt.dst
-        path = self.shortest_pathes[label][dst][0]
-        if rule[0] == 32:
-            field = setting.FIELD_DSTIP
-            priority = 32
-        else:
-            field = setting.FIELD_DSTPREFIX[rule[0]]
-            priority = rule[0]
-        match_field = rule[1]
-        for cnt in range(len(path)-1):
-            action = [(setting.ACT_FWD, path[cnt+1])]
-            entry = element.Entry(field, priority, match_field, action, 
-                                  flag=setting.FLAG_REMOVE_NOTIFY, ts=curtime, 
-                                  timeout=timeout, timeout_type=setting.TIMEOUT_IDLE)
-            instractions.append((setting.INST_ADD, path[cnt], entry))
-            self.record_install(rule)
 
-        for r in deprules:
-            if r[0] == 32:
+        start = time.time()
+        for count in range(0,self.loop_times):
+            instractions = []
+            dst = pkt.dst
+            path = self.shortest_pathes[label][dst][0]
+            if rule[0] == 32:
                 field = setting.FIELD_DSTIP
                 priority = 32
             else:
-                field = setting.FIELD_DSTPREFIX[r[0]]
-                priority = r[0]
-            match_field = r[1]
+                field = setting.FIELD_DSTPREFIX[rule[0]]
+                priority = rule[0]
+            match_field = rule[1]
             for cnt in range(len(path)-1):
                 action = [(setting.ACT_FWD, path[cnt+1])]
                 entry = element.Entry(field, priority, match_field, action, 
-                                      flag=None, ts=curtime, 
-                                      timeout=setting.INF, 
-                                      timeout_type=setting.TIMEOUT_HARD)
+                                    flag=setting.FLAG_REMOVE_NOTIFY, ts=curtime, 
+                                    timeout=timeout, timeout_type=setting.TIMEOUT_IDLE)
                 instractions.append((setting.INST_ADD, path[cnt], entry))
-                self.record_install(r)
-            
+                self.record_install(rule)
+
+            for r in deprules:
+                if r[0] == 32:
+                    field = setting.FIELD_DSTIP
+                    priority = 32
+                else:
+                    field = setting.FIELD_DSTPREFIX[r[0]]
+                    priority = r[0]
+                match_field = r[1]
+                for cnt in range(len(path)-1):
+                    action = [(setting.ACT_FWD, path[cnt+1])]
+                    entry = element.Entry(field, priority, match_field, action, 
+                                        flag=None, ts=curtime, 
+                                        timeout=setting.INF, 
+                                        timeout_type=setting.TIMEOUT_HARD)
+                    instractions.append((setting.INST_ADD, path[cnt], entry))
+                    self.record_install(r)
+            self.record_dep_install(rule, len(instractions))
+        end = time.time()
+        process_time = end - start
+        self.packetin_process_time.append(process_time)
         return instractions
 
     def packet_in_mine(self, label, pkt, reason, curtime):
@@ -329,43 +371,46 @@ class Controller:
             self.predictor.name == setting.PREDICTOR_DQN):
             timeout = self.predictor.predict(rule, curtime, label)      
 
-        instractions = []
-        dst = pkt.dst
-        path = self.shortest_pathes[label][dst][0]
-        if rule[0] == 32:
-            field = setting.FIELD_DSTIP
-            priority = 32
-        else:
-            field = setting.FIELD_DSTPREFIX[rule[0]]
-            priority = rule[0]
-        match_field = rule[1]
+        start = time.time()
+        for count in range(0,self.loop_times):
+            instractions = []
+            dst = pkt.dst
+            path = self.shortest_pathes[label][dst][0]
+            if rule[0] == 32:
+                field = setting.FIELD_DSTIP
+                priority = 32
+            else:
+                field = setting.FIELD_DSTPREFIX[rule[0]]
+                priority = rule[0]
+            match_field = rule[1]
 
-        # 如果是no match就代表是新的封包，安裝timeout idle
-        if reason == setting.OFPR_NO_MATCH:
-            for cnt in range(len(path)-1):
-                action = [(setting.ACT_FWD, path[cnt+1])]
-                entry = element.Entry(field, priority, match_field, action, 
-                                    flag=setting.FLAG_REMOVE_NOTIFY, ts=curtime, 
-                                    timeout=timeout, timeout_type=setting.TIMEOUT_IDLE)
-                instractions.append((setting.INST_ADD, path[cnt], entry))
-                self.installed[path[cnt]][rule] = True
-                self.record_install(rule)
-                self.record_hit_rate(rule)
-        # 如果是action就代表有安裝過parent封包，就安裝timeout hard and set inf timeout
-        elif reason == setting.OFPR_ACTION:
-            for cnt in range(len(path)-1):
-                action = [(setting.ACT_FWD, path[cnt+1])]
-                entry = element.Entry(field, priority, match_field, action, 
-                        flag=setting.FLAG_REMOVE_NOTIFY, ts=curtime, 
-                        timeout=setting.INF, 
-                        timeout_type=setting.TIMEOUT_HARD)
-                instractions.append((setting.INST_ADD, path[cnt], entry))
-                self.installed[path[cnt]][rule] = True
-                self.record_install(rule)       
-                self.record_hit_rate(rule)
+            # 如果是no match就代表是新的封包，安裝timeout idle
+            if reason == setting.OFPR_NO_MATCH:
+                for cnt in range(len(path)-1):
+                    action = [(setting.ACT_FWD, path[cnt+1])]
+                    entry = element.Entry(field, priority, match_field, action, 
+                                        flag=setting.FLAG_REMOVE_NOTIFY, ts=curtime, 
+                                        timeout=timeout, timeout_type=setting.TIMEOUT_IDLE)
+                    instractions.append((setting.INST_ADD, path[cnt], entry))
+                    self.record_install(rule)
+                    self.record_hit_rate(rule)
+            # 如果是action就代表有安裝過parent封包，就安裝timeout hard and set inf timeout
+            elif reason == setting.OFPR_ACTION:
+                for cnt in range(len(path)-1):
+                    action = [(setting.ACT_FWD, path[cnt+1])]
+                    entry = element.Entry(field, priority, match_field, action, 
+                            flag=setting.FLAG_REMOVE_NOTIFY, ts=curtime, 
+                            timeout=setting.INF, 
+                            timeout_type=setting.TIMEOUT_HARD)
+                    instractions.append((setting.INST_ADD, path[cnt], entry))
+                    self.record_install(rule)       
+                    self.record_hit_rate(rule)
 
-        instractions += self.install_dirdeprule(rule, path, curtime)
-                
+            instractions += self.install_dirdeprule(rule, path, curtime)
+            self.record_dep_install(rule, len(instractions))
+        end = time.time()
+        process_time = end - start
+        self.packetin_process_time.append(process_time)
         return instractions
 
     def flow_removed(self, label, expire, overflow, curtime, mode=setting.MODE_DEFAULT):
@@ -426,6 +471,7 @@ class Controller:
             n_counter = counter
             if entry.counter > 0:
                 n_counter = n_counter + 1
+                self.tot_hit += 1
             self.hit_rate[rule] = (install, n_counter)
 
         for entry in deleted:

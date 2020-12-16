@@ -135,6 +135,7 @@ class Network:
                     n_counter = counter
                     if entry.counter > 0:
                         n_counter = counter + 1
+                        self.controller.tot_hit += 1 
                     self.controller.hit_rate[rule] = (install, n_counter)
             # delete entry
             elif act == setting.INST_DELETE:

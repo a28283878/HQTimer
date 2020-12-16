@@ -22,6 +22,7 @@ class Data:
         self.burst_fct = {}
         self.tail_fct = {}
         self.install_num = {}
+        self.dep_install_num = {}
 
     def record(self, flownum, delay, totentry, overflow, pktin, totinstall, pktnum, pktsize):
         self.delay['flownum'].append(flownum)
@@ -61,9 +62,21 @@ class Data:
     def record_install_num(self, install_num):
         self.install_num = install_num
 
+    def record_dep_install_num(self, dep_install_num):
+        self.dep_install_num = dep_install_num
+
     def get_install_num_cdf(self):
         install_num_list = self.install_num.values()
         [xlist, cplist] = element.get_cdf(install_num_list)
+        cdf = {'x': xlist, 'y': cplist}
+
+        return cdf
+
+    def get_dep_install_num_cdf(self):
+        dep_install_num_list = []
+        for r in self.dep_install_num:
+            dep_install_num_list.append(self.dep_install_num[r]/self.install_num[r])
+        [xlist, cplist] = element.get_cdf(dep_install_num_list)
         cdf = {'x': xlist, 'y': cplist}
 
         return cdf
@@ -96,9 +109,12 @@ class Data:
         # tail_fct_cdf = self.get_fct_cdf(self.tail_fct)
         # with open(fileprefix+'_tail_fct_cdf.json', 'w') as f:
         #     print(json.dumps(tail_fct_cdf), file=f)
-        # install_num_cdf = self.get_install_num_cdf()
-        # with open(fileprefix+'_install_cdf.json', 'w') as f:
-        #     print(json.dumps(install_num_cdf), file=f)
+        install_num_cdf = self.get_install_num_cdf()
+        with open(fileprefix+'_install_cdf.json', 'w') as f:
+            print(json.dumps(install_num_cdf), file=f)
+        dep_install_num_cdf = self.get_dep_install_num_cdf()
+        with open(fileprefix+'_dep_install_cdf.json', 'w') as f:
+            print(json.dumps(dep_install_num_cdf), file=f)
         # with open(fileprefix+'_predict.json', 'w') as f:
         #     print(json.dumps(self.predict), file=f)
         return

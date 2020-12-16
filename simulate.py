@@ -21,6 +21,10 @@ def simulate(para):
     predictor_name = para['predictor_name']
     #
     update_interval = para['update_interval']
+    #
+    flow_per_sec = 0
+    if para['flow_per_sec'] is not None :
+        flow_per_sec = para['flow_per_sec']
     validate_point = None
     max_flownum = None
     if para['max_flownum'] is not None :
@@ -125,7 +129,7 @@ def simulate(para):
 
         flowsize = n.traffic.flowsize[pkt.tp]
         #d.record_fct(pkt.tp, pkttime, flowsize)
-                
+
         if fnum%check_interval == 0:
             # if fnum not in d.delay['flownum']:
             if fnum not in visited_check_points:
@@ -145,9 +149,30 @@ def simulate(para):
 
                 if 'save_model' in para:
                     c.predictor.save_weights(log_prefix)
-
+        
+        
+        if flow_per_sec != 0 and fnum%flow_per_sec == 0:
+            if (fnum/flow_per_sec)*1e6 > curtime:
+                curtime = (fnum/flow_per_sec)*1e6
     d.record_install_num(c.install_num)
+    d.record_dep_install_num(c.dep_install_num)
     d.print_data(log_prefix)
+
+
+    timeout_type = {
+        setting.MODE_HARD: 'hard', 
+        setting.MODE_IDLE: 'idle',
+        setting.MODE_HYBRID: 'hybrid',
+        setting.MODE_MINE: 'mine'
+    }
+    
+    # with open('./data/{}.txt'.format(timeout_type[mode]), 'a+') as f:
+    #     print('{} {}'.format(flow_per_sec, overflow_num['total']), file=f)
+
+    with open('./data/{}_process_time.txt'.format(timeout_type[mode]), 'a+') as f:
+        for i in range(0, len(n.controller.packetin_process_time)):
+            print(n.controller.packetin_process_time[i], file=f)
+
     with open('dep_usage.txt', 'a') as f:
         for i in range(len(n.switches[1].dep_count)):
             if n.switches[1].dep_count[i] > 0:
@@ -283,7 +308,7 @@ def test():
     return
 
 
-def single(mode, predictor_name, max_flownum=None):
+def single(mode, predictor_name, max_flownum=None, flow_per_sec=0):
     timeout_type = {
         setting.MODE_HARD: 'hard', 
         setting.MODE_IDLE: 'idle',
@@ -312,7 +337,8 @@ def single(mode, predictor_name, max_flownum=None):
         'predictor_name': predictor_name,
         'update_interval': setting.DEFAULT_UPDATE,
         # 'update_interval': 1e4,
-        'max_flownum' : max_flownum
+        'max_flownum' : max_flownum,
+        'flow_per_sec' : flow_per_sec
     }
 
     simulate(para)
@@ -441,10 +467,13 @@ if __name__ == '__main__':
         predictor_name = int(argv[3])
         setting.DEFAULT_TIMEOUT = int(argv[4])*1e6 # default 5 s
         max_flownum = None
-        if len(argv) == 6:
+        flow_per_sec = 0
+        if len(argv) >= 6:
             max_flownum = int(argv[5])
+        if len(argv) >= 7:
+            flow_per_sec = int(argv[6])
         if sw == 0:  # run single
-            single(timeout_type[mode], predictor_type[predictor_name], max_flownum)
+            single(timeout_type[mode], predictor_type[predictor_name], max_flownum, flow_per_sec)
         elif sw == 1:  # run cb
             cb(timeout_type[mode], predictor_type[predictor_name])
         elif sw == 2:  # run brain
